@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2018 Filip Björklund
+// Copyright (c) 2018-2019 Filip Björklund
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -39,7 +39,7 @@ extern "C" {
 // ========================================================================== //
 
 /** Boolean type **/
-typedef uint8_t AlfBool;
+typedef uint32_t AlfBool;
 
 // -------------------------------------------------------------------------- //
 
@@ -48,7 +48,7 @@ typedef uint8_t AlfBool;
  * \brief Thread start function.
  * \param argument Argument to the function.
  */
-typedef uint32_t(*PFN_ThreadFunction)(void* argument);
+typedef uint32_t(*PFN_AlfThreadFunction)(void* argument);
 
 // -------------------------------------------------------------------------- //
 
@@ -80,7 +80,7 @@ typedef AlfBool(*PFN_AlfPredicate)(void* argument);
 // Allocation macros
 #if !defined(ALF_THREAD_ALLOC)
 #	include <stdlib.h>
-	/** Allocation function. Size represents the amount of memory to allocate, in bytes **/
+	/** Allocation function **/
 #	define ALF_THREAD_ALLOC(size) malloc(size)
 #endif
 
@@ -95,50 +95,23 @@ typedef AlfBool(*PFN_AlfPredicate)(void* argument);
 #if !defined(ALF_THREAD_ASSERT)
 #	include <assert.h>
 	/** Internal assertion macro **/
-#	define ALF_THREAD_ASSERT(cond, msg) assert(cond && msg)
+#	define ALF_THREAD_ASSERT(cond, msg) assert((cond) && msg)
 #endif 
 
 // Default thread name
 #define ALF_DEFAULT_THREAD_NAME "Unknown"
 
 // ========================================================================== //
-// Structures
+// Enumerations
 // ========================================================================== //
-
-/** \enum AlfThreadResult
- * \author Filip Björklund
- * \date 03 oktober 2018 - 16:22
- * \brief
- * \details
- */
-typedef enum AlfThreadResult
-{
-	/** Success **/
-	ALF_THREAD_SUCCESS,
-	/** Unknown error **/
-	ALF_THREAD_UNKNOWN_ERROR,
-
-	/** Invalid arguments **/
-	ALF_THREAD_INVALID_ARGUMENTS,
-	/** Invalid handle value **/
-	ALF_THREAD_INVALID_HANDLE,
-	/** Access denied **/
-	ALF_THRAD_ACCESS_DENIED,
-	/** Timeout **/
-	ALF_THREAD_TIMEOUT,
-	/** Caller is not owner of object **/
-	ALF_THREAD_NOT_OWNER,
-	/** Object is still in use when being destroyed **/
-	ALF_THREAD_STILL_IN_USE
-} AlfThreadResult;
-
-// -------------------------------------------------------------------------- //
 
 /** \enum AlfThreadPriority
  * \author Filip Björklund
  * \date 03 oktober 2018 - 16:23
- * \brief
+ * \brief Thread priorities.
  * \details
+ * Enumeration of thread priorities.
+ * \see alfSetThreadPriority
  */
 typedef enum AlfThreadPriority
 {
@@ -158,6 +131,31 @@ typedef enum AlfThreadPriority
 
 // -------------------------------------------------------------------------- //
 
+/** \enum AlfCache
+ * \author Filip Björklund
+ * \date 08 januari 2019 - 20:32
+ * \brief Caches in a CPU.
+ * \details
+ * Enumeration of caches that may be available in a CPU.
+ */
+typedef enum AlfCache
+{
+	/** Level 1 data cache **/
+	ALF_CACHE_L1D,
+	/** Level 1 instruction cache **/
+	ALF_CACHE_L1I,
+	/** Level 2 combined cache **/
+	ALF_CACHE_L2,
+	/** Level 3 combined cache **/
+	ALF_CACHE_L3,
+	/** Level 4 combined cache **/
+	ALF_CACHE_L4,
+} AlfCache;
+
+// ========================================================================== //
+// Structures
+// ========================================================================== //
+
 /** \struct AlfThread
  * \author Filip Björklund
  * \date 03 oktober 2018 - 16:11
@@ -174,7 +172,8 @@ typedef struct tag_AlfThread AlfThread;
  * \date 03 oktober 2018 - 16:25
  * \brief Semaphore.
  * \details
- * 
+ * Structure that represents a semaphore that is used to ensure that only a set
+ * of threads may enter a section at one time.
  */
 typedef struct tag_AlfSemaphore AlfSemaphore;
 
@@ -185,7 +184,8 @@ typedef struct tag_AlfSemaphore AlfSemaphore;
  * \date 03 oktober 2018 - 16:25
  * \brief Mutex.
  * \details
- * 
+ * Structure that represents a mutex, mutual exclusion, that is used to ensure 
+ * that only one thread is executing a section of code at one time.
  */
 typedef struct tag_AlfMutex AlfMutex;
 
@@ -196,6 +196,8 @@ typedef struct tag_AlfMutex AlfMutex;
  * \date 03 oktober 2018 - 16:25
  * \brief Condition variable.
  * \details
+ * Structure that represents a condition variable for threads to wait on until a
+ * condition is true and they are notified.
  */
 typedef struct tag_AlfConditionVariable AlfConditionVariable;
 
@@ -203,14 +205,12 @@ typedef struct tag_AlfConditionVariable AlfConditionVariable;
 
 /** \struct AlfReadWriteLock
  * \author Filip Björklund
- * \date 03 oktober 2018 - 16:25
- * \brief Read/Write lock
+ * \date 08 januari 2019 - 21:47
+ * \brief Read-write lock.
  * \details
- * Represents a lock that can be locked in both read and write mode. When it's 
- * locked in read mode all other threads that try to acquire it in read mode 
- * will succeed, and writers will fail. When, however, it's locked in write mode
- * it will only allow the thread that acquired it to write. Other threads trying
- * to acquire either read or write at the same time will fail.
+ * Structure that represents a locking primitive that can be locked in both read
+ * and write mode. Multiple readers can hold the lock at the same time, however
+ * only one writer can hold it simultaneously.
  */
 typedef struct tag_AlfReadWriteLock AlfReadWriteLock;
 
@@ -260,7 +260,7 @@ void alfThreadShutdown(void);
  * \param argument Argument passed to function.
  * \return Handle to thread.
  */
-AlfThread* alfCreateThread(PFN_ThreadFunction function, void* argument);
+AlfThread* alfCreateThread(PFN_AlfThreadFunction function, void* argument);
 
 // -------------------------------------------------------------------------- //
 
@@ -278,7 +278,10 @@ AlfThread* alfCreateThread(PFN_ThreadFunction function, void* argument);
  * \param name Name of the thread.
  * \return Handle to thread.
  */
-AlfThread* alfCreateThreadNamed(PFN_ThreadFunction function, void* argument, char* name);
+AlfThread* alfCreateThreadNamed(
+	PFN_AlfThreadFunction function, 
+	void* argument, 
+	const char* name);
 
 // -------------------------------------------------------------------------- //
 
@@ -327,12 +330,8 @@ AlfBool alfJoinThreadTry(AlfThread* thread, uint32_t* exitCodeOut);
  * \note A thread that has been detached cannot be joined.
  * \brief Detach thread.
  * \param thread Handle to the thread that is to be detached.
- * \return Result:
- * - ALF_THREAD_SUCCESS: Successfully detached thread.
- * - ALF_THREAD_UNKNOWN_ERROR: Unknown error.
- * - ALF_THREAD_INVALID_HANDLE: Invalid thread handle.
  */
-AlfThreadResult alfDetachThread(AlfThread* thread);
+void alfDetachThread(AlfThread* thread);
 
 // -------------------------------------------------------------------------- //
 
@@ -363,17 +362,14 @@ void alfYieldThread(void);
 
 /** Set the priority of a thread. This priority will affect how the operationg
  * system schedules the threads.
+ * \note Apple systems does not support this function and it will therefore 
+ * always return false.
  * \brief Set thread priority.
  * \param thread Thread to set priority of.
  * \param priority Prioriy to set.
- * \return Result:
- * - ALF_THREAD_SUCCESS: Successfully set thread priority.
- * - ALF_THREAD_UNKNOWN_ERROR: Unknown error.
- * - ALF_THREAD_INVALID_HANDLE: Invalid thread handle.
- * - ALF_THREAD_INVALID_PRIORITY: Invalid priority.
- * - ALF_THREAD_ACCESS_DENIED: Caller is not allowed to set thread priority.
+ * \return True if the priority could be set othewise false.
  */
-AlfThreadResult alfSetThreadPriority(AlfThread* thread, AlfThreadPriority priority);
+AlfBool alfSetThreadPriority(AlfThread* thread, AlfThreadPriority priority);
 
 // -------------------------------------------------------------------------- //
 
@@ -408,11 +404,9 @@ const char* alfGetThreadName(void);
  * the thread internally.
  * \brief Set thread name.
  * \param name Name to set.
- * \return Result:
- * - ALF_PTHREAD_SUCCESS: Successfully set thread name.
- * - ALF_PTHREAD_UNKNOWN_ERROR: Unknown error.
+ * \return True if the name could be set, otherwise false.
  */
-AlfThreadResult alfSetThreadName(const char* name);
+AlfBool alfSetThreadName(const char* name);
 
 // ========================================================================== //
 // Semaphore functions
@@ -441,13 +435,8 @@ void alfDeleteSemaphore(AlfSemaphore* semaphore);
  * one, then it will be decremented and the function will return.
  * \brief Acquire Semaphore.
  * \param semaphore Semaphore to acquire.
- * \return Result:
- * - ALF_THREAD_SUCCESS: Successfully acquired semaphore.
- * - ALF_THREAD_UNKNOWN_ERROR: Unknown error.
- * - ALF_THREAD_TIMEOUT: Timed out.
- * - ALF_THREAD_INVALID_HANDLE: Invalid semaphore handle.
  */
-AlfThreadResult alfAcquireSemaphore(AlfSemaphore* semaphore);
+void alfAcquireSemaphore(AlfSemaphore* semaphore);
 
 // -------------------------------------------------------------------------- //
 
@@ -456,13 +445,11 @@ AlfThreadResult alfAcquireSemaphore(AlfSemaphore* semaphore);
  * \brief Acquire semaphore with timeout.
  * \param semaphore Semaphore to acquire.
  * \param milliseconds Milliseconds until timing out.
- * \return Result:
- * - ALF_THREAD_SUCCESS: Successfully acquired semaphore.
- * - ALF_THREAD_UNKNOWN_ERROR: Unknown error.
- * - ALF_THREAD_TIMEOUT: Timed out. 
- * - ALF_THREAD_INVALID_HANDLE: Invalid semaphore handle.
+ * \return True if the semaphore was acquired otherwise false.
  */
-AlfThreadResult alfAcquireSemaphoreTimed(AlfSemaphore* semaphore, uint64_t milliseconds);
+AlfBool alfAcquireSemaphoreTimed(
+	AlfSemaphore* semaphore, 
+	uint64_t milliseconds);
 
 // -------------------------------------------------------------------------- //
 
@@ -482,13 +469,8 @@ AlfBool alfAcquireSemaphoreTry(AlfSemaphore* semaphore);
  * return.
  * \brief Release semaphore.
  * \param semaphore Semaphore to release.
- * \return Result:
- * - ALF_THREAD_SUCCESS: Successfully released semaphore.
- * - ALF_THREAD_UNKNOWN_ERROR: Unknown error.
- * - ALF_THREAD_INVALID_HANDLE: Invalid semaphore handle.
- * - ALF_SEMAPHORE_OVERFLOW: Maximum semaphore value reached.
  */
-AlfThreadResult alfReleaseSemaphore(AlfSemaphore* semaphore);
+void alfReleaseSemaphore(AlfSemaphore* semaphore);
 
 // ========================================================================== //
 // Mutex functions
@@ -507,29 +489,18 @@ AlfMutex* alfCreateMutex(AlfBool recursive);
 /** Delete a mutex. 
  * \note The user is responsible for making sure that the mutex is not held by
  * any thread when it is destroyd, as that results in undefined behaviour.
- * \note This function won't fail on Windows.
  * \brief Delete mutex.
  * \param mutex Mutex to destroy.
- * \return Result:
- * - ALF_THREAD_SUCCESS: Successfully destroyed mutex.
- * - ALF_THREAD_UNKNOWN_ERROR: Unknown error.
- * - ALF_THREAD_INVALID_HANDLE: Invalid mutex handle.
- * - ALF_THREAD_STILL_IN_USE: Mutex is still locked by a thread.
  */
-AlfThreadResult alfDeleteMutex(AlfMutex* mutex);
+void alfDeleteMutex(AlfMutex* mutex);
 
 // -------------------------------------------------------------------------- //
 /** Acquire a mutex. This function blocks until any other thread that holds the
  * mutex releases it.
  * \brief Acquire mutex.
  * \param mutex Mutex to acquire.
- * \return Result:
- * - ALF_THREAD_SUCCESS: Successfully acquired mutex.
- * - ALF_THREAD_UNKNOWN_ERROR: Unknown error.
- * - ALF_THREAD_INVALID_HANDLE: Invalid mutex handle.
- * - ALF_THREAD_DEADLOCK: A non-recursive mutex was locked recursively.
  */
-AlfThreadResult alfAcquireMutex(AlfMutex* mutex);
+void alfAcquireMutex(AlfMutex* mutex);
 
 // -------------------------------------------------------------------------- //
 
@@ -548,13 +519,18 @@ AlfBool alfAcquireMutexTry(AlfMutex* mutex);
  * calling thread does not already hold the mutex will result in no operation.
  * \brief Release mutex.
  * \param mutex Mutex to release.
- * \return Result:
- * - ALF_THREAD_SUCCESS: Successfully released mutex.
- * - ALF_THREAD_UNKNOWN_ERROR: Unknown error.
- * - ALF_THREAD_INVALID_HANDLE: Invalid mutex handle.
- * - ALF_THREAD_ALREADY_LOCKED: Mutex is not locked.
  */
-AlfThreadResult alfReleaseMutex(AlfMutex* mutex);
+void alfReleaseMutex(AlfMutex* mutex);
+
+// -------------------------------------------------------------------------- //
+
+/** Returns whether or not a mutex is recursive. A recursive mutex can be locked
+ * multiple times from the same thread will still owned by the thread.
+ * \brief Returns whether mutex is recursive.
+ * \param mutex Mutex to check.
+ * \return True if the mutex is recursive else false.
+ */
+AlfBool alfIsMutexRecursive(AlfMutex* mutex);
 
 // ========================================================================== //
 // Condition variable functions
@@ -571,16 +547,10 @@ AlfConditionVariable* alfCreateConditionVariable(void);
 /** Delete condition variable.
  * \note It's up to the user to make sure that there are no threads still 
  * waiting on the condition variable when it's destroyed.
- * \note This function won't fail on Windows.
  * \brief Delete condition variable.
  * \param conditionVariable Condition variable to destroy.
- * \return Result:
- * - ALF_THREAD_SUCCESS: Successfully destroyed condition variable.
- * - ALF_THREAD_UNKNOWN_ERROR: Unknown error.
- * - ALF_THREAD_INVALID_HANDLE: Invalid condition variable handle.
- * - ALF_THREAD_IN_USE: Condition variable is still in use.
  */
-AlfThreadResult alfDeleteConditionVariable(AlfConditionVariable* conditionVariable);
+void alfDeleteConditionVariable(AlfConditionVariable* conditionVariable);
 
 // -------------------------------------------------------------------------- //
 
@@ -590,15 +560,10 @@ AlfThreadResult alfDeleteConditionVariable(AlfConditionVariable* conditionVariab
  * \brief Wait for condition variable.
  * \param conditionVariable Condition variable to wait for.
  * \param mutex Mutex that is unlocked during the wait.
- * \return Error codes:
- * - ALF_THREAD_SUCCESS: Successfully waited for condition variable.
- * - ALF_THREAD_UNKNOWN_ERROR: Unknown error.
- * - ALF_THREAD_INVALID_HANDLE: Invalid condition variable or mutex handle.
- * - ALF_THREAD_TIMEOUT: Wait timed out.
- * - ALF_THREAD_NOT_OWNER: The mutex is not owned by the calling
- * thread.
  */
-AlfThreadResult alfWaitConditionVariable(AlfConditionVariable* conditionVariable, AlfMutex* mutex);
+void alfWaitConditionVariable(
+	AlfConditionVariable* conditionVariable, 
+	AlfMutex* mutex);
 
 // -------------------------------------------------------------------------- //
 
@@ -613,7 +578,11 @@ AlfThreadResult alfWaitConditionVariable(AlfConditionVariable* conditionVariable
  * \param predicate Predicate that must hold when the condition is signaled.
  * \param predicateArgument Argument to the predicate function.
  */
-void alfWaitConditionVariablePredicate(AlfConditionVariable* conditionVariable, AlfMutex* mutex, PFN_AlfPredicate predicate, void* predicateArgument);
+void alfWaitConditionVariablePredicate(
+	AlfConditionVariable* conditionVariable, 
+	AlfMutex* mutex, 
+	PFN_AlfPredicate predicate, 
+	void* predicateArgument);
 
 // -------------------------------------------------------------------------- //
 
@@ -635,6 +604,60 @@ void alfNotifyAllConditionVariables(AlfConditionVariable* conditionVariable);
 // Read/Write lock functions
 // ========================================================================== //
 
+/** Create a read-write lock in unlocked state.
+ * \brief Create read-write lock.
+ * \return Created lock or NULL on failure.
+ */
+AlfReadWriteLock* alfCreateReadWriteLock();
+
+// -------------------------------------------------------------------------- //
+
+/** Destroy a read-write lock.
+ * \note The user is responsible for making sure that the lock is not acquired
+ * by any threads when being destroyed.
+ * \brief Destroy read-write lock.
+ * \param lock Read-write lock to destroy.
+ */
+void alfDestroyReadWriteLock(AlfReadWriteLock* lock);
+
+// -------------------------------------------------------------------------- //
+
+/** Acquire a read-write lock in read mode. This mode allows other threads to
+ * acquire the same lock in read mode. However if a thread tries to acquire the
+ * lock in write mode it will block until all writers release the lock. 
+ * This function will block until any potential writer thread releases the lock.
+ * \brief Acquire read-write lock in read mode.
+ * \param lock Lock to acquire.
+ */
+void alfAcquireReadLock(AlfReadWriteLock* lock);
+
+// -------------------------------------------------------------------------- //
+
+/** Releases a read-write lock that was previously locked in read mode.
+ * \brief Release read lock.
+ * \param lock Lock to release.
+ */
+void alfReleaseReadLock(AlfReadWriteLock* lock);
+
+// -------------------------------------------------------------------------- //
+
+/* Acquire a read-write lock in write mode. This mode will allow the thread to
+ * have exclusive access to the lock to be able to do writing. If any other 
+ * readers or writers try to acquire the lock they will block until this thread
+ * releases the lock.
+ * This function will block until any read or other writer releases the lock.
+ * \brief Acquire read-write lock in write mode.
+ * \param lock Lock to acquire.
+ */
+void alfAcquireWriteLock(AlfReadWriteLock* lock);
+
+// -------------------------------------------------------------------------- //
+
+/** Releases a read-write lock that was previously locked in write mode.
+ * \brief Release write lock.
+ * \param lock Lock to release.
+ */
+void alfReleaseWriteLock(AlfReadWriteLock* lock);
 
 // ========================================================================== //
 // TLS functions
@@ -675,1433 +698,236 @@ void alfStoreTLS(AlfTLSHandle* handle, void* data);
 void* alfLoadTLS(AlfTLSHandle* handle);
 
 // ========================================================================== //
-// Implementation
+// Atomics Functions (void*)
 // ========================================================================== //
 
-#if defined(ALF_THREAD_IMPL)
+/** Atomically store a pointer in the pointer pointed to by 'pointer'.
+ * \brief Atomically store pointer.
+ * \param pointer Pointer to store other pointer in.
+ * \param value Pointer to store.
+ */
+void alfAtomicStorePointer(void** pointer, void* value);
+
+// -------------------------------------------------------------------------- //
+/** Atomically load a pointer from the address specified by pointer.
+ * \brief Atomically load pointer.
+ * \param pointer Pointer to load.
+ * \return Loaded pointer.
+ */
+void* alfAtomicLoadPointer(void** pointer);
+
+// -------------------------------------------------------------------------- //
+/** Atomically exchange the pointer value that is stored in 'pointer' by the
+ * pointer 'value' and return the previous pointer-value stored.
+ * \brief Atomically exchange pointer.
+ * \param pointer Pointer to exchange value in.
+ * \param value Pointer to store.
+ * \return Previous pointer.
+ */
+void* alfAtomicExchangePointer(void** pointer, void* value);
+
+// -------------------------------------------------------------------------- //
+/** Atomically compares the comparand to the address stored in 'pointer'. If the
+ * values are equal then 'value' is written into 'pointer'. In either case the
+ * previous value of 'pointer' is returned.
+ * \brief Atomically compare and exchange pointers.
+ * \param pointer Pointer to exchange.
+ * \param value Value to store if pointer is equal to comparand.
+ * \param comparand Value to compare pointer with.
+ * \return Previously stored pointer.
+ */
+void* alfAtomicCompareExchangePointer(
+	void** pointer, 
+	void* value, 
+	void* comparand);
 
 // ========================================================================== //
-// Private header includes
+// Atomics Functions (int32_t)
 // ========================================================================== //
 
-// Platform detection
-#if defined(_WIN32) || defined(_WIN64) || defined(__MINGW64__)
-#	define ALF_THREAD_TARGET_WINDOWS
-#	define NOMINMAX
-#	define WIN32_LEAN_AND_MEAN
-#	include <Windows.h>
-#	include <process.h>
-#elif defined(__linux__)
-#	define ALF_THREAD_TARGET_LINUX
-#	define ALF_THREAD_PTHREAD
-#	include <semaphore.h>
-#	include <zconf.h>
-#	include <errno.h>
-#elif defined (__APPLE__)
-#	define ALF_THREAD_TARGET_MACOS
-#	define ALF_THREAD_PTHREAD
-#	include <dispatch/dispatch.h>
-#	include <errno.h>
-#else
-UNSUPPORTED_PLATFORM
-#endif
+/** Atomically store s32.
+ * \brief Atomically store s32.
+ * \param integer Integer to store in.
+ * \param value Value to store.
+ */
+void alfAtomicStoreS32(int32_t* integer, int32_t value);
 
-// Pthread header
-#if defined(ALF_THREAD_PTHREAD)
-#	include <pthread.h>
-#endif
+// -------------------------------------------------------------------------- //
+
+/** Atomically load s32.
+ * \brief Atomically load s32.
+ * \param integer Integer to load.
+ * \return Loaded value.
+ */
+int32_t alfAtomicLoadS32(int32_t* integer);
+
+// -------------------------------------------------------------------------- //
+
+/** Atomically exchange the s32 value in 'integer' with 'value'.
+ * \brief Atomically exchange s32.
+ * \param integer Integer to exchange.
+ * \param value Value to exchange with.
+ * \return Previous value.
+ */
+int32_t alfAtomicExchangeS32(int32_t* integer, int32_t value);
+
+// -------------------------------------------------------------------------- //
+
+/** Atomically compares the comparand to the value stored in 'integer'. If the
+ * values are equal then 'value' is written into 'integer'. In either case the
+ * previous value of 'integer' is returned.
+ * \brief Atomically compare and exchange s32.
+ * \param integer Integer to exchange.
+ * \param value Value to exchange with if integer is equal to comparand.
+ * \param comparand Value to compare integer with.
+ * \return Previous value.
+ */
+int32_t alfAtomicCompareExchangeS32(
+	int32_t* integer, 
+	int32_t value, 
+	int32_t comparand);
+
+// -------------------------------------------------------------------------- //
+
+/** Atomically increment the value of the s32 in 'integer'.
+ * \brief Atomically increment s32.
+ * \param integer Integer to increment.
+ * \return Value after increment.
+ */
+int32_t alfAtomicIncrementS32(int32_t* integer);
+
+// -------------------------------------------------------------------------- //
+
+/** Atomically decrement the value of the s32 in 'integer'.
+ * \brief Atomically decrement s32.
+ * \param integer Integer to decrement.
+ * \return Value after decrement.
+ */
+int32_t alfAtomicDecrementS32(int32_t* integer);
+
+// -------------------------------------------------------------------------- //
+
+/** Atomically add 'value' to the s32 in 'integer'.
+ * \brief Atomically add s32.
+ * \param integer Integer to add to.
+ * \param value Value to add.
+ * \return Value after addition.
+ */
+int32_t alfAtomicAddS32(int32_t* integer, int32_t value);
+
+// -------------------------------------------------------------------------- //
+
+/** Atomically subtract 'value' from the s32 in 'integer'.
+ * \brief Atomically subtract s32.
+ * \param integer Integer to subtract from.
+ * \param value Value to subtract.
+ * \return Value after subtraction.
+ */
+int32_t alfAtomicSubS32(int32_t* integer, int32_t value);
 
 // ========================================================================== //
-// Structures
+// Atomics Functions (uint32_t)
 // ========================================================================== //
 
-typedef struct tag_AlfThread
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	/** Thread handle**/
-	HANDLE handle;
-#elif defined(ALF_THREAD_PTHREAD)
-	/** Thread handle**/
-	pthread_t handle;
-#endif
-	/** Thread id **/
-	uint32_t id;
-	/** Name of thread **/
-	char* name;
-	/** Whether the thread has been detached **/
-	AlfBool detached;
-} tag_AlfThread;
+/** Atomically store s32.
+ * \brief Atomically store s32.
+ * \param integer Integer to store in.
+ * \param value Value to store.
+ */
+void alfAtomicStoreU32(uint32_t* integer, uint32_t value);
 
 // -------------------------------------------------------------------------- //
 
-typedef struct tag_AlfSemaphore
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	HANDLE handle;
-#elif defined(ALF_THREAD_TARGET_LINUX)
-	sem_t handle;
-#elif defined(ALF_THREAD_TARGET_MACOS)
-	dispatch_semaphore_t handle;
-#endif
-} tag_AlfSemaphore;
+/** Atomically load s32.
+ * \brief Atomically load s32.
+ * \param integer Integer to load.
+ * \return Loaded value.
+ */
+uint32_t alfAtomicLoadU32(uint32_t* integer);
 
 // -------------------------------------------------------------------------- //
 
-typedef struct tag_AlfMutex
-{
-	/** Whether mutex supports recursive locking **/
-	AlfBool recursive;
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	union
-	{
-		/** Windows slim reader-writer lock handle for non-recursive mutexes **/
-		SRWLOCK srwlock;
-		/** Windows critical section for recursive mutexes **/
-		CRITICAL_SECTION criticalSection;
-	};
-#elif defined(ALF_THREAD_PTHREAD)
-	/** Pthread mutex handle **/
-	pthread_mutex_t handle;
-	/** Pthread mutex attributes **/
-	pthread_mutexattr_t attributes;
-#endif
-} tag_AlfMutex;
+/** Atomically exchange the s32 value in 'integer' with 'value'.
+ * \brief Atomically exchange s32.
+ * \param integer Integer to exchange.
+ * \param value Value to exchange with.
+ * \return Previous value.
+ */
+uint32_t alfAtomicExchangeU32(uint32_t* integer, uint32_t value);
 
 // -------------------------------------------------------------------------- //
 
-typedef struct tag_AlfConditionVariable
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	/** Windows condition variable handle **/
-	CONDITION_VARIABLE handle;
-#elif defined(ALF_THREAD_PTHREAD)
-	/** Pthread condition variable handle **/
-	pthread_cond_t handle;
-#endif
-} tag_AlfConditionVariable;
+/** Atomically compares the comparand to the value stored in 'integer'. If the
+ * values are equal then 'value' is written into 'integer'. In either case the
+ * previous value of 'integer' is returned.
+ * \brief Atomically compare and exchange s32.
+ * \param integer Integer to exchange.
+ * \param value Value to exchange with if integer is equal to comparand.
+ * \param comparand Value to compare integer with.
+ * \return Previous value.
+ */
+uint32_t alfAtomicCompareExchangeU32(
+	uint32_t* integer, 
+	uint32_t value, 
+	uint32_t comparand);
 
 // -------------------------------------------------------------------------- //
 
-typedef struct tag_AlfReadWriteLock
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	/** Windows slim read/write lock handle **/
-	SRWLOCK handle;
-#elif defined(ALF_THREAD_PTHREAD)
-	/** Pthread read/write lock handle **/
-	pthread_rwlock handle;
-#endif
-} tag_AlfReadWriteLock;
+/** Atomically increment the value of the s32 in 'integer'.
+ * \brief Atomically increment s32.
+ * \param integer Integer to increment.
+ * \return Value after increment.
+ */
+uint32_t alfAtomicIncrementU32(uint32_t* integer);
 
 // -------------------------------------------------------------------------- //
 
-typedef struct tag_AlfTLSHandle
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	/** Windows TLS handle **/
-	DWORD handle;
-#elif defined(ALF_THREAD_PTHREAD)
-	/** Pthread TLS handle **/
-	pthread_key_t handle;
-#endif
-} tag_AlfTLSHandle;
+/** Atomically decrement the value of the s32 in 'integer'.
+ * \brief Atomically decrement s32.
+ * \param integer Integer to decrement.
+ * \return Value after decrement.
+ */
+uint32_t alfAtomicDecrementU32(uint32_t* integer);
+
+// -------------------------------------------------------------------------- //
+
+/** Atomically add 'value' to the s32 in 'integer'.
+ * \brief Atomically add s32.
+ * \param integer Integer to add to.
+ * \param value Value to add.
+ * \return Value after addition.
+ */
+uint32_t alfAtomicAddU32(uint32_t* integer, uint32_t value);
+
+// -------------------------------------------------------------------------- //
+
+/** Atomically subtract 'value' from the s32 in 'integer'.
+ * \brief Atomically subtract s32.
+ * \param integer Integer to subtract from.
+ * \param value Value to subtract.
+ * \return Value after subtraction.
+ */
+uint32_t alfAtomicSubU32(uint32_t* integer, uint32_t value);
 
 // ========================================================================== //
-// Private structures
+// Utility Functions
 // ========================================================================== //
 
-/** List node structure **/
-typedef struct AlfNode
-{
-	/** Data pointer **/
-	void* data;
-	/** Pointer to next node **/
-	struct AlfNode* next;
-} AlfNode;
+/** Returns the number of hardware threads that are available in the system.
+ * \brief Returns hardware thread count.
+ * \return Hardware thread count.
+ */
+uint32_t alfGetHardwareThreadCount();
 
 // -------------------------------------------------------------------------- //
 
-/** Global data for AlfThread library **/
-typedef struct AlfGlobalData
-{
-	/** Mutex for global data locking **/
-	AlfMutex* mutex;
-	/** TLS handle for thread handle data **/
-	AlfTLSHandle* handleTLS;
-
-	/** Handle to node of first external thread **/
-	AlfNode* externalThreads;
-} AlfGlobalData;
-
-// -------------------------------------------------------------------------- //
-
-/** Internal thread data struct. Passed to thread functions **/
-typedef struct
-{
-	/** Userdefined thread function **/
-	PFN_ThreadFunction function;
-	/** Argument to thread function **/
-	void* argument;
-	/** Name of thread **/
-	const char* name;
-	/** Thread handle pointer to store in tls **/
-	AlfThread* handle;
-
-	/** Semaphore to release when all data from this struct has been retrieved **/
-	AlfSemaphore* semaphore;
-	/** Whether the thread started correctly **/
-	AlfBool success;
-} AlfThreadData;
-
-// ========================================================================== //
-// Global data
-// ========================================================================== //
-
-/** Global data **/
-static AlfGlobalData gData;
-
-// ========================================================================== //
-// Private functions
-// ========================================================================== //
-
-/** Free a thread handle **/
-static void _alfFreeThreadHandle(AlfThread* thread)
-{
-	if (thread->name)
-	{
-		ALF_THREAD_FREE(thread->name);
-	}
-	ALF_THREAD_FREE(thread);
-}
-
-// -------------------------------------------------------------------------- //
-
-/** Add a thread that was not started by AlfThread to the list of handled threads **/
-static void _alfAddExternalThread(AlfThread* thread)
-{
-	// Acquire global data mutex
-	alfAcquireMutex(gData.mutex);
-
-	// Find last node
-	AlfNode** current = &gData.externalThreads;
-	while (*current)
-	{
-		// Go to next node
-		current = &(*current)->next;
-	}
-
-	// Append new node
-	AlfNode* node = ALF_THREAD_ALLOC(sizeof(AlfNode));
-	node->next = NULL;
-	node->data = thread;
-	*current = node;
-
-	// Release global data mutex
-	alfReleaseMutex(gData.mutex);
-}
-
-// ========================================================================== //
-// Windows-specific functions
-// ========================================================================== //
-
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-
-/** Prototype for GetThreadDescription function **/
-typedef HRESULT(*PFN_GetThreadDescription)(HANDLE thread_handle, PWSTR* thread_description);
-
-// -------------------------------------------------------------------------- //
-
-/** Prototype for SetThreadDescription function **/
-typedef HRESULT(*PFN_SetThreadDescription)(HANDLE thread_handle, PCWSTR thread_description);
-
-// -------------------------------------------------------------------------- //
-
-static wchar_t* _alfUTF8ToUTF16(const char* string)
-{
-	// if the string is NULL then return
-	if (!string) { return NULL; }
-
-	// Get the byte count
-	const uint64_t byteCount = strlen(string);
-	if (byteCount < 1) { return NULL; }
-
-	// Get the length of the converted string
-	const int32_t convertedLength = MultiByteToWideChar(
-		CP_UTF8,
-		MB_ERR_INVALID_CHARS,
-		string,
-		(int32_t)byteCount,
-		NULL,
-		0
-	);
-
-	// Assert that the string can be converted
-	ALF_THREAD_ASSERT(convertedLength > 0, "Invalid UTF-8 string");
-
-	// Allocate the utf16 string
-	wchar_t* buffer = ALF_THREAD_ALLOC(sizeof(wchar_t) * (convertedLength + 1));
-	buffer[convertedLength] = 0;
-
-	// Convert the string
-	MultiByteToWideChar(
-		CP_UTF8,
-		MB_ERR_INVALID_CHARS,
-		string,
-		(int32_t)byteCount,
-		buffer,
-		convertedLength
-	);
-
-	// Return the utf16 string
-	return buffer;
-}
-
-// -------------------------------------------------------------------------- //
-
-static char* _alfUTF16ToUTF8(const wchar_t* string)
-{
-	// if the string is NULL then return
-	if (!string) { return NULL; }
-
-	// Get the byte count
-	const uint64_t byteCount = wcslen(string);
-	if (byteCount < 1) { return NULL; }
-
-	// Get the length of the converted string
-	const int32_t convertedLength = WideCharToMultiByte(
-		CP_UTF8,
-		WC_ERR_INVALID_CHARS,
-		string,
-		(int32_t)byteCount,
-		NULL,
-		0,
-		NULL,
-		NULL
-	);
-
-	// Assert that the string can be converted
-	ALF_THREAD_ASSERT(convertedLength > 0, "Invalid UTF-16 string");
-
-	// Allocate the utf16 string
-	char* buffer = ALF_THREAD_ALLOC(sizeof(char) * (convertedLength + 1));
-	buffer[convertedLength] = 0;
-
-	// Convert the string
-	WideCharToMultiByte(
-		CP_UTF8,
-		WC_ERR_INVALID_CHARS,
-		string,
-		(int32_t)byteCount,
-		buffer,
-		convertedLength,
-		NULL,
-		NULL
-	);
-
-	// Return the utf16 string
-	return buffer;
-}
-
-// -------------------------------------------------------------------------- //
-
-static uint32_t _alfWin32ThreadStart(void* argument)
-{
-	// Cast the argument to thread data and retrieve functiona and argument
-	const AlfThreadData* data = (AlfThreadData*)argument;
-	const PFN_ThreadFunction function = data->function;
-	void* user_argument = data->argument;
-
-	// Store thread handle
-	alfStoreTLS(gData.handleTLS, data->handle);
-
-	// Set the thread name
-	alfSetThreadName(data->name);
-
-	// Release the semaphore
-	alfReleaseSemaphore(data->semaphore);
-
-	// Call the function
-	const uint32_t result = function(user_argument);
-
-	// Cleanup thread if detached
-	AlfThread* thread = alfThisThread();
-	if (thread->detached)
-	{
-		_alfFreeThreadHandle(thread);
-	}
-
-	// Return result and end thread
-	return result;
-}
-#endif // defined(ALF_THREAD_TARGET_WINDOWS)
-
-// ========================================================================== //
-// Pthread-specific functions
-// ========================================================================== //
-
-/** Thread start function **/
-#if defined(ALF_THREAD_PTHREAD)
-
-void _alfMillisecondsToTimespec(uint32_t ms, struct timespec* time)
-{
-	time->tv_sec = ms / 1000;
-	time->tv_nsec = (ms % 1000) * 1000000;
-}
-
-// -------------------------------------------------------------------------- //
-
-static void* _alfPthreadThreadStart(void* argument)
-{
-	// Cast the argument to thread data and retrieve functiona and argument
-	const AlfThreadData* data = (AlfThreadData*)argument;
-	const PFN_ThreadFunction function = data->function;
-	void* user_argument = data->argument;
-
-	// Store thread handle
-	alfStoreTLS(gData.handleTLS, data->handle);
-
-	// Set the thread name
-	alfSetThreadName(data->name);
-
-	// Release the semaphore
-	alfReleaseSemaphore(data->semaphore);
-
-	// Call the function
-	const uint32_t result = function(user_argument);
-
-	// Cleanup thread if detached
-	AlfThread* thread = alfThisThread();
-	if (thread->detached)
-	{
-		_alfFreeThreadHandle(thread);
-	}
-
-	// Return result and end thread
-	return result;
-}
-#endif // defined(ALF_THREAD_TARGET_WINDOWS)
-// ========================================================================== //
-// Thread functions
-// ========================================================================== //
-
-inline void alfThreadStartup(void)
-{
-	gData.handleTLS = alfGetTLS();
-	gData.mutex = alfCreateMutex(ALF_FALSE);
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void alfThreadShutdown()
-{
-	// Free all external node handles
-	AlfNode* current = gData.externalThreads;
-	while (current)
-	{
-		// Store old node and step to next
-		AlfNode* old = current;
-		current = current->next;
-
-		// Cleanup the thread handle
-		_alfFreeThreadHandle((AlfThread*)old->data);
-
-		// Free old node
-		ALF_THREAD_FREE(old);
-	}
-
-	// Deallocate tls handles
-	alfReturnTLS(gData.handleTLS);
-
-	// Delete mutex
-	alfDeleteMutex(gData.mutex);
-}
-
-// -------------------------------------------------------------------------- //
-
-inline AlfThread* alfCreateThread(PFN_ThreadFunction function, void* argument)
-{
-	return alfCreateThreadNamed(function, argument, NULL);
-}
-
-// -------------------------------------------------------------------------- //
-
-inline AlfThread* alfCreateThreadNamed(PFN_ThreadFunction function, void* argument, char* name)
-{
-	// Allocate thread object
-	AlfThread* thread = ALF_THREAD_ALLOC(sizeof(AlfThread));
-	if (!thread) { return NULL; }
-
-	// Clear thread handle
-	memset(thread, 0, sizeof(AlfThread));
-
-	// Setup thread data
-	AlfThreadData data;
-	data.function = function;
-	data.argument = argument;
-	data.name = name;
-	data.handle = thread;
-	data.semaphore = alfCreateSemaphore(0);
-	data.success = ALF_TRUE;
-
-	// Check if the semaphore is valid
-	if (!data.semaphore)
-	{
-		ALF_THREAD_FREE(thread);
-		return NULL;
-	}
-
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	// Start the thread
-	uint32_t id;
-	const HANDLE handle = (HANDLE)_beginthreadex(
-		NULL,
-		0,
-		_alfWin32ThreadStart,
-		(void*)&data,
-		0,
-		&id
-	);
-
-	// Check if handle is valid
-	if (handle == INVALID_HANDLE_VALUE)
-	{
-		// Free thread object and return
-		ALF_THREAD_FREE(thread);
-		return NULL;
-	}
-#elif defined(ALF_THREAD_PTHREAD)
-	// Start thread
-	pthread_t handle;
-	const int result = pthread_create(
-		&handle,
-		NULL,
-		_alfPthreadThreadStart,
-		(void*)&data
-	);
-
-	// Check result
-	if (result != 0)
-	{
-		// Free thread object and return
-		ALF_THREAD_FREE(thread);
-		return NULL;
-	}
-
-	// Get id
-	uint32_t id = (uint32_t)(u_int64_t)handle;
-#endif
-
-	// Wait for and then destroy semaphore
-	alfAcquireSemaphore(data.semaphore);
-	alfDeleteSemaphore(data.semaphore);
-
-	// Assign handle and id
-	thread->handle = handle;
-	thread->id = id;
-
-	// Setup other thread properties
-	thread->detached = ALF_FALSE;
-
-	// Check for errors during thread initialization
-	if (!data.success)
-	{
-		// Join the thread
-		alfJoinThread(thread);
-	}
-
-	// Return the thread
-	return thread;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline AlfThread* alfThisThread()
-{
-	// Get thread
-	AlfThread* thread = (AlfThread*)alfLoadTLS(gData.handleTLS);
-
-	// Check if handle is valid
-	if (!thread)
-	{
-		// Allocate a new handle
-		thread = ALF_THREAD_ALLOC(sizeof(AlfThread));
-		if (!thread) { return NULL; }
-
-		// Set thread-handle data
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-		thread->handle = (HANDLE)GetCurrentThread();
-		thread->id = (uint32_t)GetCurrentThreadId();
-		thread->name = NULL;
-		thread->detached = ALF_FALSE;
-#elif defined(ALF_THREAD_PTHREAD)
-		thread->handle = pthread_self();
-		thread->id = (uint32_t)(uint64_t)thread->handle;
-		thread->name = NULL;
-		thread->detached = ALF_FALSE;
-#endif
-
-		// Setup thread handle
-		alfStoreTLS(gData.handleTLS, thread);
-
-		// Add external thread handle
-		_alfAddExternalThread(thread);
-	}
-
-	// Return the thread object
-	return thread;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline uint32_t alfJoinThread(AlfThread* thread)
-{
-	// Exit code
-	uint32_t exitCode;
-
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	// Wait for thread
-	WaitForSingleObject(thread->handle, INFINITE);
-	DWORD _exitCode;
-	GetExitCodeThread(thread->handle, &_exitCode);
-	exitCode = _exitCode;
-
-	// Close handle to the thread
-	CloseHandle(thread->handle);
-#elif defined(ALF_THREAD_PTHREAD)
-	// Join thread
-	void* result;
-	pthread_join(thread->handle, &result);
-	exitCode = (uint32_t)((uint64_t)result);
-#endif
-
-	// Free the thread handle
-	_alfFreeThreadHandle(thread);
-
-	// Return exit code
-	return exitCode;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline AlfBool alfJoinThreadTry(AlfThread* thread, uint32_t* exitCodeOut)
-{
-	// Exit code
-	uint32_t exitCode;
-
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	// Wait for thread
-	const DWORD result = WaitForSingleObject(thread->handle, 0);
-	ALF_THREAD_ASSERT(result != WAIT_FAILED && result != WAIT_ABANDONED, "Failed to try to join thread");
-	if (result == WAIT_TIMEOUT)
-	{
-		*exitCodeOut = 0;
-		return ALF_FALSE;
-	}
-	DWORD _exitCode;
-	GetExitCodeThread(thread->handle, &_exitCode);
-	exitCode = _exitCode;
-	CloseHandle(thread->handle);
-#elif defined(ALF_THREAD_PTHREAD)
-	// Join thread
-	void* result;
-	int result = pthread_tryjoin_np(thread->handle, &result);
-	if (result == EBUSY)
-	{
-		*exitCodeOut = 0;
-		return ALF_FALSE;
-	}
-	exitCode = (uint32_t)((uint64_t)result);
-#endif
-
-	// Free the thread handle
-	_alfFreeThreadHandle(thread);
-
-	// Return exit code
-	*exitCodeOut = exitCode;
-	return ALF_TRUE;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline AlfThreadResult alfDetachThread(AlfThread* thread)
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	// Close handle to detach the thread
-	const BOOL result = CloseHandle(thread->handle);
-	if (!result)
-	{
-		return ALF_THREAD_UNKNOWN_ERROR;
-	}
-#elif defined(ALF_THREAD_PTHREAD)
-	// Detach thread
-	int result = pthread_detach(thread->handle);
-	if (result != 0)
-	{
-		return ALF_THREAD_UNKNOWN_ERROR;
-	}
-#endif
-
-	// Set detach status
-	thread->detached = ALF_TRUE;
-
-	// Return success
-	return ALF_THREAD_SUCCESS;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void alfKillThread(AlfThread* thread)
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	const BOOL result = TerminateThread(thread->handle, 0);
-	ALF_THREAD_ASSERT(result != 0, "Failed to kill thread");
-#elif defined(ALF_THREAD_PTHREAD)
-	int result = pthread_kill(thread->handle, 0);
-	ALF_THREAD_ASSERT(result == 0, "Failed to kill thread");
-#endif
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void alfExitThread(uint32_t exitCode)
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	// Cleanup thread if detached
-	AlfThread* thread = alfThisThread();
-	if (thread->detached)
-	{
-		_alfFreeThreadHandle(thread);
-	}
-
-	// Exit thread
-	_endthreadex(exitCode);
-#elif defined(ALF_THREAD_PTHREAD)
-	pthread_exit((void*)((uint64_t)exitCode));
-#endif
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void alfYieldThread()
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	SwitchToThread();
-#elif defined(ALF_THREAD_PTHREAD)
-	int result = sched_yield();
-	ALF_THREAD_ASSERT(result == 0, "Failed to yield thread");
-#endif
-}
-
-// -------------------------------------------------------------------------- //
-
-inline AlfThreadResult alfSetThreadPriority(AlfThread* thread, AlfThreadPriority priority)
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	// Determine priority
-	int32_t prio = THREAD_PRIORITY_NORMAL;
-	switch (priority)
-	{
-		case ALF_THREAD_PRIORITY_LOWEST: { prio = THREAD_PRIORITY_LOWEST; break; }
-		case ALF_THREAD_PRIORITY_LOW: { prio = THREAD_PRIORITY_BELOW_NORMAL; break; }
-		case ALF_THREAD_PRIORITY_HIGH: { prio = THREAD_PRIORITY_ABOVE_NORMAL; break; }
-		case ALF_THREAD_PRIORITY_HIGHEST: { prio = THREAD_PRIORITY_HIGHEST; break; }
-		case ALF_THREAD_PRIORITY_CRITICAL: { prio = THREAD_PRIORITY_TIME_CRITICAL; break; }
-		case ALF_THREAD_PRIORITY_NORMAL: { break; }
-		default: { return ALF_THREAD_INVALID_ARGUMENTS; }
-	}
-
-	// Set priority
-	const BOOL result = SetThreadPriority(
-		thread->handle,
-		prio
-	);
-	if (!result)
-	{
-		return ALF_THREAD_UNKNOWN_ERROR;
-	}
-#elif defined(ALF_THREAD_PTHREAD)
-	// Determine priority
-	int prio = 0;
-	switch (priority)
-	{
-		case ALF_THREAD_PRIORITY_LOWEST: { prio = -2; break; }
-		case ALF_THREAD_PRIORITY_LOW: { prio = -1; break; }
-		case ALF_THREAD_PRIORITY_HIGH: { prio = 1; break; }
-		case ALF_THREAD_PRIORITY_HIGHEST: { prio = 2; break; }
-		case ALF_THREAD_PRIORITY_CRITICAL: { prio = 3; break; }
-		default: break;
-	}
-	int result = pthread_setschedprio(thread->handle, prio);
-	switch (result)
-	{
-		case 0: break;
-		case EINVAL: return ALF_THREAD_INVALID_ARGUMENTS;
-		case EPERM: return ALF_THRAD_ACCESS_DENIED;
-		case ESRCH: return ALF_THREAD_INVALID_HANDLE;
-		default: return ALF_THREAD_UNKNOWN_ERROR; 
-	}
-#endif
-
-	// Return success
-	return ALF_THREAD_SUCCESS;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void alfSleepThread(uint64_t milliseconds)
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	Sleep((DWORD)milliseconds);
-#elif defined(ALF_THREAD_PTHREAD)
-	struct timespec time;
-	_alfMillisecondsToTimespec(milliseconds, &time);
-	nanosleep(&time, NULL);
-#endif
-}
-
-// -------------------------------------------------------------------------- //
-
-inline uint32_t alfGetThreadID(AlfThread* thread)
-{
-	return thread->id;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline const char* alfGetThreadName()
-{
-	// Get thread handle
-	AlfThread* thread = alfThisThread();
-
-	// Return 'Unknown' for threads with no set name
-	if (!thread->name)
-	{
-		alfSetThreadName(ALF_DEFAULT_THREAD_NAME);
-	}
-
-	// Return the thread name
-	return thread->name;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline AlfThreadResult alfSetThreadName(const char* name)
-{
-	// If name is NULL then set name to Unknown
-	if (!name)
-	{
-		return alfSetThreadName(ALF_DEFAULT_THREAD_NAME);
-	}
-
-	// Get thread handle
-	AlfThread* thread = alfThisThread();
-
-	// Free old name
-	if (thread->name)
-	{
-		ALF_THREAD_FREE(thread->name);
-		thread->name = NULL;
-	}
-
-	// Copy name into handle if not NULL
-	const size_t length = strlen(name);
-	thread->name = (char*)ALF_THREAD_ALLOC(length + 1);
-	memcpy(thread->name, name, length + 1);
-
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	// Get the address to 'SetThreadDescription'.
-	const PFN_SetThreadDescription pSetThreadDescription = (PFN_SetThreadDescription)GetProcAddress(GetModuleHandleW(L"Kernel32.dll"), "SetThreadDescription");
-
-	// Use the function if available
-	if (pSetThreadDescription)
-	{
-		// Convert name to utf16
-		wchar_t* _name = _alfUTF8ToUTF16(name);
-
-		// Set the name of the thread
-		const HRESULT result = pSetThreadDescription(GetCurrentThread(), _name);
-		if (!SUCCEEDED(result))
-		{
-			return ALF_THREAD_UNKNOWN_ERROR;
-		}
-
-		// Free the converted string
-		ALF_THREAD_FREE(_name);
-	}
-	else
-	{
-		// TODO(Filip Björklund): Implement using exceptions
-	}
-#elif defined(ALF_THREAD_PTHREAD)
-	// Create temp name if longer than 15 characters
-	if (length > 15)
-	{
-		// Use temp name
-		char temp_name[16];
-		temp_name[15] = 0;
-		memcpy(temp_name, name, 15);
-		// TODO(Filip Björklund): Don't cut UTF-8 codepoints in half!
-
-		// Set the thread name
-		pthread_setname_np(temp_name);
-	}
-	else
-	{
-		// Set the thread name
-		pthread_setname_np(name);
-	}
-#endif
-
-	// Return success
-	return ALF_THREAD_SUCCESS;
-}
-
-// ========================================================================== //
-// Semaphore functions
-// ========================================================================== //
-
-inline AlfSemaphore* alfCreateSemaphore(uint64_t initialValue)
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	// Create the semaphore handle
-	const HANDLE handle = CreateSemaphoreExW(
-		NULL,
-		(LONG)initialValue,
-		(LONG)LONG_MAX,
-		NULL,
-		0,
-		SYNCHRONIZE | SEMAPHORE_MODIFY_STATE
-	);
-	if (!handle)
-	{
-		return NULL;
-	}
-#elif defined(ALF_THREAD_TARGET_LINUX)
-	ALF_THREAD_ASSERT(initialValue < SEM_VALUE_MAX, "Initial semaphore value exceeds SEM_VALUE_MAX for pthread implementation");
-	sem_t handle;
-	const int result = sem_init(&handle, 0, (unsigned int)initialValue);
-	if (result != 0)
-	{
-		return NULL;
-	}
-#elif defined(ALF_THREAD_TARGET_MACOS)
-	dispatch_semaphore_t handle = dispatch_semaphore_create(initialValue);
-#endif
-
-	// Allocate the semaphore
-	AlfSemaphore* semaphore = ALF_THREAD_ALLOC(sizeof(AlfSemaphore));
-	semaphore->handle = handle;
-
-	// Return the semaphore
-	return semaphore;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void alfDeleteSemaphore(AlfSemaphore* semaphore)
-{
-	// Return immediately if the handle is NULL
-	if (!semaphore) { return; }
-
-	// Delete semaphore
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	CloseHandle(semaphore->handle);
-#elif defined(ALF_THREAD_TARGET_LINUX)
-	sem_destroy(&semaphore->handle);
-#elif defined(ALF_THREAD_TARGET_MACOS)
-	dispatch_release(semaphore->handle);
-#endif
-
-	// Free the semaphore object
-	ALF_THREAD_FREE(semaphore);
-}
-
-// -------------------------------------------------------------------------- //
-
-inline AlfThreadResult alfAcquireSemaphore(AlfSemaphore* semaphore)
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	// Wait for semaphore
-	const DWORD result = WaitForSingleObjectEx(semaphore->handle, INFINITE, FALSE);
-	switch (result)
-	{
-		case WAIT_OBJECT_0: break;
-		case WAIT_TIMEOUT: return ALF_THREAD_TIMEOUT;
-		default: return ALF_THREAD_UNKNOWN_ERROR;
-	}
-#elif defined(ALF_THREAD_TARGET_LINUX)
-	// Wait for semaphore
-	const int result = sem_wait(&semaphore->handle);
-	if (result == -1)
-	{
-		// Check result
-		int error = errno;
-		switch (error)
-		{
-			case EINVAL: return ALF_THREAD_INVALID_HANDLE;
-			case ETIMEDOUT: return ALF_THREAD_TIMEOUT;
-			default: return ALF_THREAD_UNKNOWN_ERROR;
-		}
-	}
-#elif defined(ALF_THREAD_TARGET_MACOS)
-	long result = dispatch_semaphore_wait(semaphore->handle, DISPATCH_TIME_FOREVER);
-	if (result != 0)
-	{
-		return ALF_THREAD_TIMEOUT;
-	}
-#endif
-
-	// Return success
-	return ALF_THREAD_SUCCESS;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline AlfThreadResult alfAcquireSemaphoreTimed(AlfSemaphore* semaphore, uint64_t milliseconds)
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	// Wait for semaphore
-	const DWORD result = WaitForSingleObjectEx(semaphore->handle, (DWORD)milliseconds, FALSE);
-	switch (result)
-	{
-		case WAIT_OBJECT_0: break;
-		case WAIT_TIMEOUT: return ALF_THREAD_TIMEOUT;
-		default: return ALF_THREAD_UNKNOWN_ERROR;
-	}
-
-#elif defined(ALF_THREAD_TARGET_LINUX)
-	// Wait for semaphore
-	int result;
-	if (milliseconds == CHIF_IMMEDIATE)
-	{
-		result = sem_trywait(&semphore->handle);
-	}
-	else
-	{
-		struct timespec timeout;
-		_alfMillisecondsToTimespec(milliseconds, &timeout);
-		result = sem_timedwait(&semaphore->handle, &timeout);
-	}
-
-	// Check specific error if result is -1
-	if (result == -1)
-	{
-		// Check result
-		int error = errno;
-		switch (error)
-		{
-			case EINVAL: return ALF_THREAD_INVALID_HANDLE;
-			case ETIMEDOUT: return ALF_THREAD_TIMEOUT;
-			default: return ALF_THREAD_UNKNOWN_ERROR,
-		}
-	}
-#elif defined(ALF_THREAD_TARGET_MACOS)
-	// Create dispatch_time_t structure from milliseconds
-	dispatch_time_t timeout = dispatch_time(DISPATCH_TIME_NOW, milliseconds * 1000000);
-
-	// Wait for the semaphore either until released or timeout
-	long result = dispatch_semaphore_wait(semaphore->handle, timeout);
-	if (result != 0)
-	{
-		return CHIF_CONCURRENT_TIMEOUT;
-	}
-#endif
-
-	// Return success
-	return ALF_THREAD_SUCCESS;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline AlfBool alfAcquireSemaphoreTry(AlfSemaphore* semaphore)
-{
-	// Do a timed acquire with immediate timeout
-	return alfAcquireSemaphoreTimed(semaphore, ALF_THREAD_IMMEDIATELY) == ALF_THREAD_SUCCESS;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline AlfThreadResult alfReleaseSemaphore(AlfSemaphore* semaphore)
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	// Release semaphore
-	const BOOL result = ReleaseSemaphore(semaphore->handle, (LONG)1, NULL);
-	if (result == 0)
-	{
-		// Switch on error codes
-		const DWORD error = GetLastError();
-		switch (error)
-		{
-			default: return ALF_THREAD_UNKNOWN_ERROR;
-		}
-	}
-#elif defined(ALF_THREAD_TARGET_LINUX)
-	// Post semaphore
-	const int result = sem_post(&semaphore->handle);
-	ALF_THREAD_ASSERT(result != EOVERFLOW, "Maximum value for semaphore would be exceeded if it's released");
-	switch (result)
-	{
-		case 0: break;
-		case EINVAL: return ALF_THREAD_INVALID_HANDLE;
-		default: return ALF_THREAD_UNKNOWN_ERROR;
-	}
-#elif defined(ALF_THREAD_TARGET_MACOS)
-	dispatch_semaphore_signal(semaphore->handle);
-#endif
-
-	// Return success
-	return ALF_THREAD_SUCCESS;
-}
-
-// ========================================================================== //
-// Mutex functions
-// ========================================================================== //
-
-inline AlfMutex* alfCreateMutex(AlfBool recursive)
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	tag_AlfMutex handle;
-	if (recursive) { InitializeCriticalSection(&handle.criticalSection); }
-	else { InitializeSRWLock(&handle.srwlock); }
-#elif defined(ALF_THREAD_PTHREAD)
-	tag_AlfMutex handle;
-
-	// Initialize mutex attributes
-	int result = pthread_mutexattr_init(&handle.attr);
-	if (result != 0) { return NULL; }
-
-	// Set attributes
-	pthread_mutexattr_settype(
-		&handle.attr,
-		recursive ? PTHREAD_MUTEX_RECURSIVE : PTHREAD_MUTEX_ERRORCHECK
-	);
-
-	// Initialize mutex
-	result = pthread_mutex_init(&handle.mutex, &handle.attr);
-	ALF_THREAD_ASSERT(result != EINVAL, "Invalid pthread mutex attribute specified during creation")
-	if (result != 0) { return NULL; }
-#endif
-
-	// Allocate mutex object
-	AlfMutex* mutex = ALF_THREAD_ALLOC(sizeof(AlfMutex));
-	handle.recursive = recursive;
-	*mutex = handle;
-
-	// Return the mutex
-	return mutex;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline AlfThreadResult alfDeleteMutex(AlfMutex* mutex)
-{
-	// Return immediately if the handle is NULL
-	if (!mutex) { return ALF_THREAD_SUCCESS; }
-
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	if (mutex->recursive)
-	{
-		DeleteCriticalSection(&mutex->criticalSection);
-	}
-#elif defined(ALF_THREAD_PTHREAD)
-	// Delete handle
-	int result = pthread_mutex_destroy(&mutex->handle.mutex);
-	switch (result)
-	{
-		case 0: { break; }
-		case EINVAL: { return ALF_THREAD_INVALID_HANDLE; }
-		case EBUSY: { return ALF_THREAD_IN_USE; }
-		default: { return ALF_THREAD_UNKNOWN_ERROR; }
-	}
-
-	// Delete attributes
-	result = pthread_mutexattr_destroy(&mutex->handle.attr);
-	ALF_THREAD_ASSERT(result != EINVAL, "Invalid pthread mutex attribute object");
-#endif
-
-	// Free the mutex object
-	ALF_THREAD_FREE(mutex);
-
-	// Return success
-	return ALF_THREAD_SUCCESS;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline AlfThreadResult alfAcquireMutex(AlfMutex* mutex)
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	if (mutex->recursive) { EnterCriticalSection(&mutex->criticalSection); }
-	else { AcquireSRWLockExclusive(&mutex->srwlock); }
-#elif defined(ALF_THREAD_PTHREAD)
-	// Lock mutex
-	int result;
-	do
-	{
-		result = pthread_mutex_lock(&mutex->handle.mutex);
-	} while (result == EBUSY);
-
-	// Check result
-	ALF_THREAD_ASSERT(result != EAGAIN, "Recursive mutex is locked too many times")
-	switch (result)
-	{
-		case 0: { break; }
-		case EINVAL: { return ALF_THREAD_INVALID_HANDLE; }
-		case EDEADLK: { return ALF_THREAD_DEADLOCK; }
-		default: { return ALF_THREAD_UNKNOWN_ERROR; }
-	}
-#endif
-
-	// Return success
-	return ALF_THREAD_SUCCESS;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline AlfBool alfAcquireMutexTry(AlfMutex* mutex)
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	if (mutex->recursive)
-	{
-		const BOOL result = TryEnterCriticalSection(&mutex->criticalSection);
-		return result != 0;
-	}
-	const BOOL result = TryAcquireSRWLockExclusive(&mutex->srwlock);
-	return result != 0;
-#elif defined(ALF_THREAD_PTHREAD)
-	int result = pthread_mutex_trylock(&mutex->handle.mutex);
-	return result == 0;
-#endif
-}
-
-// -------------------------------------------------------------------------- //
-
-inline AlfThreadResult alfReleaseMutex(AlfMutex* mutex)
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	if (mutex->recursive) { LeaveCriticalSection(&mutex->criticalSection); }
-	else { ReleaseSRWLockExclusive(&mutex->srwlock); }
-#elif defined(ALF_THREAD_PTHREAD)
-	// Unlock mutex
-	int result = pthread_mutex_unlock(&mutex->handle.mutex);
-	switch (result)
-	{
-		case 0: { break; }
-		case EINVAL: { return CHIF_CONCURRENT_INVALID_HANDLE; }
-		case EBUSY: { return CHIF_CONCURRENT_ALREADY_LOCKED; }
-		default: { return CHIF_CONCURRENT_RESULT_UNKNOWN; }
-	}
-#endif
-
-	// Return success
-	return ALF_THREAD_SUCCESS;
-}
-
-// ========================================================================== //
-// Condition variable functions
-// ========================================================================== //
-
-inline AlfConditionVariable* alfCreateConditionVariable()
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	// Initialize condition variable
-	CONDITION_VARIABLE handle;
-	InitializeConditionVariable(&handle);
-#elif defined(ALF_THREAD_PTHREAD)
-	// Initialize condition variable
-	pthread_cond_t handle;
-	int result = pthread_cond_init(&handle, NULL);
-	if (result != 0)
-	{
-		return NULL;
-	}
-#endif
-
-	// Allocate condition variable handle
-	AlfConditionVariable* conditionVariable = ALF_THREAD_ALLOC(sizeof(AlfConditionVariable));
-	conditionVariable->handle = handle;
-	return conditionVariable;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline AlfThreadResult alfDeleteConditionVariable(AlfConditionVariable* conditionVariable)
-{
-	// Return immediately if the handle is NULL
-	if (!conditionVariable) { return ALF_THREAD_SUCCESS; }
-
-#if defined(ALF_THREAD_PTHREAD)
-	// Delete condition variable
-	int result = pthread_cond_destroy(&condition_variable->handle);
-	switch (result)
-	{
-		case 0: { break; }
-		case EINVAL: { return ALF_THREAD_INVALID_HANDLE; }
-		case EBUSY: { return ALF_THREAD_IN_USE; }
-		default: { return ALF_THREAD_UNKNOWN_ERROR; }
-	}
-#endif
-
-	// Free condition variable object
-	ALF_THREAD_FREE(conditionVariable);
-
-	// Return success
-	return ALF_THREAD_SUCCESS;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline AlfThreadResult alfWaitConditionVariable(AlfConditionVariable* conditionVariable, AlfMutex* mutex)
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	// Sleep condition variable
-	BOOL result;
-	if (mutex->recursive) { result = SleepConditionVariableCS(&conditionVariable->handle, &mutex->criticalSection, INFINITE); }
-	else { result = SleepConditionVariableSRW(&conditionVariable->handle, &mutex->srwlock, INFINITE, 0); }
-
-	// Check result
-	if (result == 0)
-	{
-		// Switch on error
-		const DWORD error = GetLastError();
-		switch (error)
-		{
-			case ERROR_TIMEOUT: { return ALF_THREAD_TIMEOUT; }
-			default: { return ALF_THREAD_UNKNOWN_ERROR; }
-		}
-	}
-#elif defined(ALF_THREAD_PTHREAD)
-	// Wait for condition variable
-	int result = pthread_cond_wait(&condition_variable->handle, &mutex->handle.mutex);
-	switch (result)
-	{
-		case EINVAL: { return ALF_THREAD_INVALID_HANDLE; }
-		case EPERM: { return ALF_THREAD_NOT_OWNER; }
-	}
-#endif
-
-	// Return success
-	return ALF_THREAD_SUCCESS;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void alfWaitConditionVariablePredicate(AlfConditionVariable* conditionVariable, AlfMutex* mutex, PFN_AlfPredicate predicate, void* predicateArgument)
-{
-	while (!predicate(predicateArgument))
-	{
-		alfWaitConditionVariable(conditionVariable, mutex);
-	}
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void alfNotifyConditionVariable(AlfConditionVariable* conditionVariable)
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	// Wake one condition variable
-	WakeConditionVariable(&conditionVariable->handle);
-#elif defined(ALF_THREAD_PTHREAD)
-	// Signal one condition variable
-	int result = pthread_cond_signal(&condition_variable->handle);
-	CHIF_ASSERT(result != EINVAL, "Invalid condition variable object");
-#endif
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void alfNotifyAllConditionVariables(AlfConditionVariable* conditionVariable)
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-		// Wake all condition variables
-		WakeAllConditionVariable(&conditionVariable->handle);
-#elif defined(ALF_THREAD_PTHREAD)
-		// Broadcast to all condition variables
-		int result = pthread_cond_broadcast(&condition_variable->handle);
-		ALF_THREAD_ASSERT(result != EINVAL, "Invalid condition variable object");
-#endif
-}
-
-// ========================================================================== //
-// Read/Write lock functions
-// ========================================================================== //
-
-
-
-// ========================================================================== //
-// TLS functions
-// ========================================================================== //
-
-inline AlfTLSHandle* alfGetTLS()
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	// Allocate tls
-	const DWORD tls = TlsAlloc();
-	if (tls == TLS_OUT_OF_INDEXES)
-	{
-		return NULL;
-	}
-#elif defined(ALF_THREAD_PTHREAD)
-	// Create tls key
-	pthread_key_t tls;
-	int result = pthread_key_create(&tls, NULL);
-	if (result != 0)
-	{
-		return NULL;
-	}
-#endif
-
-	// Allocate handle
-	AlfTLSHandle* handle = ALF_THREAD_ALLOC(sizeof(AlfTLSHandle));
-	if (!handle) { return NULL; }
-	handle->handle = tls;
-	return handle;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void alfReturnTLS(AlfTLSHandle* handle)
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	const BOOL result = TlsFree(handle->handle);
-	ALF_THREAD_ASSERT(result != 0, "Failed to return TLS handle");
-#elif defined(ALF_THREAD_PTHREAD)
-	int result = pthread_key_delete(handle->handle);
-	ALF_THREAD_ASSERT(result == 0, "Failed to return TLS handle");
-#endif
-
-	// Free handle
-	ALF_THREAD_FREE(handle);
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void alfStoreTLS(AlfTLSHandle* handle, void* data)
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	const BOOL result = TlsSetValue(handle->handle, data);
-	ALF_THREAD_ASSERT(result != 0, "Failed to store data in TLS");
-#elif defined(ALF_THREAD_PTHREAD)
-	pthread_setspecific(tls.handle, data);
-#endif
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void* alfLoadTLS(AlfTLSHandle* handle)
-{
-#if defined(ALF_THREAD_TARGET_WINDOWS)
-	return TlsGetValue(handle->handle);
-#elif defined(ALF_THREAD_PTHREAD)
-	return pthread_getspecific(handle->handle);
-#endif
-}
-
-// ========================================================================== //
-// End of implementation
-// ========================================================================== //
-
-#endif // defined(ALF_THREAD_IMPL
+/** Returns the size of a cache line in the cache of the specified type.
+ * \brief Returns cache line size.
+ * \param type Type of cache.
+ * \return Cache line size. -1 is returned if info could not be retrieved or the
+ * system does not have the specified type of cache.
+ */
+int32_t alfGetCacheLineSize(AlfCache type);
 
 // ========================================================================== //
 // End of header
