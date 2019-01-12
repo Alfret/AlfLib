@@ -29,6 +29,7 @@
 
 #include "alf_unicode.h"
 #include "alf_thread.h"
+#include "alf_collection.h"
 
 // ========================================================================== //
 // Unicode Tests
@@ -138,8 +139,67 @@ void test_alfCreateThread(AlfTestState* state)
 	alfCheckTrueM(state, exitCode == strlen(name),
 		"Exit code from thread should match length of the name set for the "
 		"thread");
+}
 
+// ========================================================================== //
+// Collection Tests
+// ========================================================================== //
 
+void test_alfCreateHashTable(AlfTestState* state)
+{
+	// Setup test data
+	const char* keys[] = {
+		"Apple", "Apricot", "Avocado", "Banana", "Bilberry",
+		"Blackberry", "Blackcurrant", "Blueberry", "Boysenberry", "Crab Apples",
+		"Currant", "Cherry", "Cherimoya", "Chico Fruit", "Cloudberry",
+		"Coconut", "Cranberry", "Cucumber", "Damson", "Date", 
+		"Dragonfruit", "Durian", "Elderberry", "Feijoa", "Fig",
+		"Goji Berry", "Gooseberry", "Grape", "Grapefruit", "Guava",
+		"Honeyberry", "Huckleberry", "Jabuticaba", "Jackfruit", "Jambul",
+		"Japanese Plum", "Jostaberry", "Jujube", "Juniper Berry", "Kiwano",
+		"Kiwifruit", "Kumquat", "Lemon", "Lime", "Loquat",
+		"Longan", "Lychee", "Mango", "Mangosteen", "Marionberry",
+		"Cantaloupe", "Honeydew", "Watermelon", "Mulberry", "Nectarine",
+		"Nance", "Olive", "Orange", "Blood Orange", "Clementine", 
+		"Mandarine", "Tangerine", "Papaya", "Passionfruit", "Peach",
+		"Pear", "Persimmon", "Plantain", "Plum", "Pineapple",
+		"Pineberry", "Plumcot", "Pomegranate", "Pomelo", "Purple Mangosteen",
+		"Quince", "Raspberry", "Redcurrant", "Salal", "Salak"
+	};
+	uint32_t values[] = {
+		0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,11,12,13,14,15,16,17,18,19,
+		20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,
+		40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,
+		60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79
+	};
+	const uint32_t keyCount = sizeof(keys) / sizeof(keys[0]);
+	const uint32_t valueCount = sizeof(values) / sizeof(values[0]);
+
+	// Test insertion
+	AlfHashTable* table = alfCreateHashTableSimple(sizeof(uint32_t), NULL);
+	for (uint32_t i = 0; i < keyCount; i++)
+	{
+		const AlfBool success = alfHashTableInsert(table, keys[i], &values[i]);
+		alfCheckTrueM(state, success, 
+			"Check that insertion of all values work");
+	}
+
+	// Check that count is correct
+	alfCheckTrueM(state, alfHashTableGetSize(table) == keyCount, 
+		"Check that hash-table size is correct after insertions");
+
+	// Check that value are in list
+	for (uint32_t i = 0; i < keyCount; i++)
+	{
+		uint32_t* value = alfHashTableGet(table, keys[i]);
+		alfCheckNotNullM(state, value,
+			"Check that keys are actually in list");
+		alfCheckTrueM(state, *value == values[i],
+			"Check that value returned from 'get' is correct");
+	}
+
+	// Destroy table
+	alfDestroyHashTable(table);
 }
 
 // ========================================================================== //
@@ -166,12 +226,23 @@ int main()
 	AlfTestSuite* suiteThread =
 		alfCreateTestSuite("Thread", testsThread, 1);
 
+	// Setup suite: Collection
+	AlfTest testsCollection[] = {
+		{ "Create Hash Table", test_alfCreateHashTable }
+	};
+	AlfTestSuite* suiteCollection =
+		alfCreateTestSuite("Collection", testsCollection, 1);
+
 	// Run suites
 	AlfTestSuite* suites[] = {
 		suiteUnicode,
-		suiteThread
+		suiteThread,
+		suiteCollection
 	};
-	const AlfBool failures = alfRunSuites(suites, 2);
+	const AlfBool failures = alfRunSuites(suites, 3);
+	alfDestroyTestSuite(suiteCollection);
+	alfDestroyTestSuite(suiteThread);
+	alfDestroyTestSuite(suiteUnicode);
 
 	// Shutdown
 	alfThreadShutdown();

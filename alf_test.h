@@ -109,7 +109,7 @@ extern "C" {
  * Suites are created with "alfCreateTestSuite". This function takes the name of
  * the suite, the array of tests and a count for the number of tests in the 
  * array. When the user is done with the suite it should call 
- * "alfDeleteTestSuite" to free all memory that it's using. 
+ * "alfDestroyTestSuite" to free all memory that it's using. 
  * 
  * The user may optionally call some functions for setting user data or callback
  * for the suite before running any tests. The user data is retrievable from any
@@ -184,7 +184,7 @@ extern "C" {
  *     AlfTestSuite* suite = alfCreateTestSuite("Demo Suite", tests, 3);
  * 
  *     const uint32_t fails = alfRunSuite(suite);
- *     alfDeleteTestSuite(suite);
+ *     alfDestroyTestSuite(suite);
  * 	   return fails;
  * }
  *
@@ -399,7 +399,7 @@ AlfTestSuite* alfCreateTestSuite(char* name, AlfTest* tests, INT_TYPE count);
  * \brief Delete test suite.
  * \param suite Test suite to delete.
  */
-void alfDeleteTestSuite(AlfTestSuite* suite);
+void alfDestroyTestSuite(AlfTestSuite* suite);
 
 // -------------------------------------------------------------------------- //
 
@@ -818,7 +818,7 @@ inline AlfTestSuite* alfCreateTestSuite(char* name, AlfTest* tests, INT_TYPE cou
 
 // -------------------------------------------------------------------------- //
 
-inline void alfDeleteTestSuite(AlfTestSuite* suite)
+inline void alfDestroyTestSuite(AlfTestSuite* suite)
 {
 	for (INT_TYPE i = 0; i < suite->testCount; i++)
 	{
