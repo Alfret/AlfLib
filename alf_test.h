@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2018 Filip Björklund
+// Copyright (c) 2018-2019 Filip Björklund
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -215,26 +215,6 @@ typedef PFN_SuiteSetup PFN_SuiteTeardown;
 // Macro declarations
 // ========================================================================== //
 
-// Allocation macros
-#if !defined(ALF_TEST_CUSTOM_ALLOC)
-#	include <stdlib.h>
-#	define ALF_TEST_ALLOC(size) malloc(size)
-#	define ALF_TEST_FREE(mem) free(mem)
-#endif
-
-// Assert macros
-#if !defined(ALF_TEST_ASSERT)
-#	include <assert.h>
-	/** Internal assertion macro. NOT to be used for asserting in unit tests. Use alfCheck instead **/
-#	define ALF_TEST_ASSERT(cond, msg) assert(cond && msg)
-#endif 
-
-// Print macro
-#if !defined(ALF_TEST_PRINTF)
-#	include <stdio.h>
-#	define ALF_TEST_PRINTF(format, ...) printf(format, ##__VA_ARGS__)
-#endif
-
 // Filename macro
 #if defined(_WIN32)
 	/** Macro for name of current file **/
@@ -254,85 +234,68 @@ typedef PFN_SuiteSetup PFN_SuiteTeardown;
 // ========================================================================== //
 
 /** Check that condition is true **/
-#define alfCheckTrue(state, condition) \
-	alfCheck(state, condition, "TRUE(" #condition ")", __FILENAME__, __LINE__)
+#define ALF_CHECK_TRUE(state, condition) \
+	alfCheckTrue(state, condition, #condition, __FILENAME__, __LINE__, NULL)
+/** Check that condition is true. With a reason **/
+#define ALF_CHECK_TRUE_R(state, condition, reason) \
+	alfCheckTrue(state, condition, #condition, __FILENAME__, __LINE__, reason)
+
 /** Check that condition is false **/
-#define alfCheckFalse(state, condition) \
-	alfCheck(state, !(condition), "FALSE(" #condition ")", __FILENAME__, __LINE__)
-/** Check that condition is true. With explanation **/
-#define alfCheckTrueM(state, condition, explanation) \
-	alfCheckM(state, condition, "TRUE(" #condition ")", __FILENAME__, __LINE__, explanation)
-/** Check that condition is false. With explanation **/
-#define alfCheckFalseM(state, condition, explanation) \
-	alfCheckM(state, !(condition), "FALSE(" #condition ")", __FILENAME__, __LINE__, explanation)
+#define ALF_CHECK_FALSE(state, condition) \
+	alfCheckFalse(state, !(condition), #condition, __FILENAME__, __LINE__, NULL)
+/** Check that condition is false. With a reason **/
+#define ALF_CHECK_FALSE_R(state, condition, explanation) \
+	alfCheckFalse(state, !(condition), #condition, __FILENAME__, __LINE__, reason)
 
 /** Check that a pointer is not NULL **/
-#define alfCheckNotNull(state, pointer)	\
-	alfCheck(state, (pointer) != NULL, "NOTNULL(" #pointer ")", __FILENAME__, __LINE__)
-/** Check that a pointer is not NULL **/
-#define alfCheckNotNullM(state, pointer, explanation)	\
-	alfCheckM(state, (pointer) != NULL, "NOTNULL(" #pointer ")", __FILENAME__, __LINE__, explanation)
+#define ALF_CHECK_NOT_NULL(state, pointer)	\
+	alfCheckNotNull(state, pointer, #pointer, __FILENAME__, __LINE__, NULL)
+/** Check that a pointer is not NULL. With a reason **/
+#define ALF_CHECK_NOT_NULL_R(state, pointer, reason)	\
+	alfCheckNotNull(state, pointer, #pointer, __FILENAME__, __LINE__, reason)
+
 /** Check that a pointer is NULL **/
-#define alfCheckNull(state, pointer)	\
-	alfCheck(state, (pointer) == NULL, "NULL(" #pointer ")", __FILENAME__, __LINE__)
-/** Check that a pointer is NULL **/
-#define alfCheckNullM(state, pointer, explanation)	\
-	alfCheckM(state, (pointer) == NULL, "NULL(" #pointer ")", __FILENAME__, __LINE__, explanation)
+#define ALF_CHECK_NULL(state, pointer)	\
+	alfCheckNull(state, pointer, #pointer, __FILENAME__, __LINE__, NULL)
+/** Check that a pointer is NULL. With a reason **/
+#define ALF_CHECK_NULL_R(state, pointer, reason)	\
+	alfCheckNull(state, pointer, #pointer, __FILENAME__, __LINE__, reason)
 
 /** Check that two memory regions contains the same data **/
-#define alfCheckMemEq(state, m0, m1, size)	\
-	alfCheck(state, memcmp(m0, m1, size) == 0, "MEMEQ(" #m0 " == " #m1 ", size: " #size ")", __FILENAME__, __LINE__)
-/** Check that two memory regions contains the same data. With explanation **/
-#define alfCheckMemEqM(state, m0, m1, size, explanation)	\
-	alfCheck(state, memcmp(m0, m1, size) == 0, "MEMEQ(" #m0 " == " #m1 ", size: " #size ")", __FILENAME__, __LINE__, explanation)
+#define ALF_CHECK_MEMEQ(state, m0, m1, size)	\
+	alfCheckMemEq(state, m0, m1, #m0, #m1, size, __FILENAME__, __LINE__, NULL)
+/** Check that two memory regions contains the same data. With a reason **/
+#define ALF_CHECK_MEMEQ_R(state, m0, m1, size, reason)	\
+	alfCheckMemEq(state, m0, m1, #m0, #m1, size, __FILENAME__, __LINE__, reason)
 
 /** Check that two nul-terminated c-strings are equal **/
-#define alfCheckStrEq(state, str0, str1)	\
-	alfCheck(state, str0 && str1 && strcmp(str0, str1) == 0, "STREQ(" #str0 " == " #str1 ")", __FILENAME__, __LINE__)
-/** Check that two nul-terminated c-strings are equal. With explanation **/
-#define alfCheckStrEqM(state, str0, str1, explanation)	\
-	alfCheckM(state, str0 && str1 && strcmp(str0, str1) == 0, "STREQ(" #str0 " == " #str1 ")", __FILENAME__, __LINE__, explanation)
-
-/** Check that two single-precision floating-point numbers are equal **/
-#define alfCheckFloatEq(state, float0, float1)											\
-	alfCheck(																			\
-		state,																			\
-		(float0 - float1 < ALF_FLOAT_EPSILON) && (float1 - float0 < ALF_FLOAT_EPSILON),	\
-		"FLOATEQ(" #float0 " == " #float1 ")",											\
-		__FILENAME__, __LINE__															\
-	)
-/** Check that two single-precision floating-point numbers are equal. With explanation **/
-#define alfCheckFloatEqM(state, float0, float1, explanation)								\
-	alfCheckM(																			\
-		state,																			\
-		(float0 - float1 < ALF_FLOAT_EPSILON) && (float1 - float0 < ALF_FLOAT_EPSILON),	\
-		"FLOATEQ(" #float0 " == " #float1 ")",											\
-		__FILENAME__, __LINE__, explanation												\
-	)
-
-/** Check that two double-precision floating-point numbers are equal **/
-#define alfCheckDoubleEq(state, double0, double1)												\
-	alfCheck(																					\
-		state,																					\
-		(double0 - double1 < ALF_DOUBLE_EPSILON) && (double1 - double0 < ALF_DOUBLE_EPSILON),	\
-		"DOUBLEEQ(" #double0 " == " #double1 ")",												\
-		__FILENAME__, __LINE__																	\
-	)
-/** Check that two double-precision floating-point numbers are equal. With explanation **/
-#define alfCheckDoubleEqM(state, double0, double1, explanation)									\
-	alfCheckM(																					\
-		state,																					\
-		(double0 - double1 < ALF_DOUBLE_EPSILON) && (double1 - double0 < ALF_DOUBLE_EPSILON),	\
-		"DOUBLEEQ(" #double0 " == " #double1 ")",												\
-		__FILENAME__, __LINE__, explanation														\
-	)
+#define ALF_CHECK_STREQ(state, str0, str1)								\
+	alfCheckStrEq(														\
+		state, str0, str1, #str0, #str1, __FILENAME__, __LINE__, NULL)
+/** Check that two nul-terminated c-strings are equal. With a reason **/
+#define ALF_CHECK_STREQ_R(state, str0, str1, reason)					\
+	alfCheckStrEq(														\
+		state, str0, str1, #str0, #str1, __FILENAME__, __LINE__, reason)
 
 // ========================================================================== //
 // Type definitions
 // ========================================================================== //
 
+/** Boolean type used **/
+typedef unsigned long BOOL_TYPE;
+
+// -------------------------------------------------------------------------- //
+
 /** Standard integer type used **/
-typedef int INT_TYPE;
+typedef unsigned long INT_TYPE;
+
+// -------------------------------------------------------------------------- //
+
+/** Size type used **/
+typedef unsigned long long SIZE_TYPE;
+
+// -------------------------------------------------------------------------- //
+
 /** Integer type used for time **/
 typedef unsigned long long TIME_TYPE;
 
@@ -492,521 +455,78 @@ void alfClearSuiteTeardownCallback(AlfTestSuite* suite);
  * used directly. Instead use the check macros.
  * \brief Function for checking during test.
  * \param state Test state.
- * \param condition Condition to check.
- * \param conditionText Condition in text form.
+ * \param predicate Predicate to check.
+ * \param predicateString Predicate in string form.
  * \param file File in which check is done.
  * \param line Line in file.
+ * \param reason Reason for the check.
  */
-void alfCheck(AlfTestState* state, INT_TYPE condition, char* conditionText, char* file, INT_TYPE line);
+void alfCheckTrue(
+	AlfTestState* state,
+	BOOL_TYPE predicate,
+	const char* predicateString,
+	const char* file,
+	INT_TYPE line,
+	const char* reason);
 
 // -------------------------------------------------------------------------- //
 
-/** Function to do a check (assertion) during a test. This should however not be
- * used directly. Instead use the check macros. The explanation should be used 
- * to explanation why the test is done.
- * \brief Function for checking during test.
- * \param state Test state.
- * \param condition Condition to check.
- * \param conditionText Condition in text form.
- * \param file File in which check is done.
- * \param line Line in file.
- */
-void alfCheckM(AlfTestState* state, INT_TYPE condition, char* conditionText, char* file, INT_TYPE line, char* explanation);
+void alfCheckFalse(
+	AlfTestState* state,
+	BOOL_TYPE predicate,
+	const char* predicateString,
+	const char* file,
+	INT_TYPE line,
+	const char* reason);
+
+// -------------------------------------------------------------------------- //
+
+void alfCheckNotNull(
+	AlfTestState* state,
+	void* pointer,
+	const char* pointerText,
+	const char* file,
+	INT_TYPE line,
+	const char* reason);
+
+// -------------------------------------------------------------------------- //
+
+void alfCheckNull(
+	AlfTestState* state,
+	void* pointer,
+	const char* pointerText,
+	const char* file,
+	INT_TYPE line,
+	const char* reason);
+
+// -------------------------------------------------------------------------- //
+
+void alfCheckMemEq(
+	AlfTestState* state,
+	const void* m0,
+	const void* m1,
+	const char* var0,
+	const char* var1,
+	SIZE_TYPE size,
+	const char* file,
+	INT_TYPE line,
+	const char* reason);
+
+// -------------------------------------------------------------------------- //
+
+void alfCheckStrEq(
+	AlfTestState* state, 
+	const char* str0, 
+	const char* str1, 
+	const char* var0, 
+	const char* var1,
+	const char* file,
+	INT_TYPE line,
+	const char* reason);
 
 // -------------------------------------------------------------------------- //
 
 char* alfLastIndexOf(char* string, char character);
-
-// ========================================================================== //
-// HERE STARTS THE IMPLEMENTATION
-// ========================================================================== //
-
-#if defined(ALF_TEST_IMPL)
-
-// ========================================================================== //
-// Header includes
-// ========================================================================== //
-
-// Windows headers
-#if defined(_WIN32)
-#	include <Windows.h>
-#endif
-
-// ========================================================================== //
-// Color themes declarations
-// ========================================================================== //
-
-// Template for color themes
-#if 0
-
-
-#endif
-
-// Color reset macro
-#if !defined(ALF_THEME_NONE)
-#	define ALF_TEST_CC_RESET "\033[0m"
-#else
-#	define ALF_TEST_CC_RESET ""
-#endif
-
-// Color macros for different themes and support
-#if defined(ALF_TEST_NO_TRUECOLOR)
-#	if defined(ALF_THEME_NONE)
-#		define ALF_TEST_CC_SUITE ""
-#		define ALF_TEST_CC_NAME ""
-#		define ALF_TEST_CC_FILE ""
-#		define ALF_TEST_CC_LINE ""
-#		define ALF_TEST_CC_TIME ""
-#		define ALF_TEST_CC_PASS ""
-#		define ALF_TEST_CC_FAIL ""
-#		define ALF_TEST_CC_TYPE ""
-#	elif defined(ALF_TEST_THEME_PALE)
-#		define ALF_TEST_CC_SUITE "\033[38;5;93m"
-#		define ALF_TEST_CC_NAME "\033[38;5;63m"
-#		define ALF_TEST_CC_FILE "\033[38;5;69m"
-#		define ALF_TEST_CC_LINE "\033[38;5;26m"
-#		define ALF_TEST_CC_TIME "\033[38;5;220m"
-#		define ALF_TEST_CC_PASS "\033[38;5;85m"
-#		define ALF_TEST_CC_FAIL "\033[38;5;197m"
-#		define ALF_TEST_CC_TYPE "\033[38;5;171m"
-#	elif defined(ALF_TEST_THEME_AUTUMN_FRUIT)
-#		define ALF_TEST_CC_SUITE ""
-#		define ALF_TEST_CC_NAME ""
-#		define ALF_TEST_CC_FILE ""
-#		define ALF_TEST_CC_LINE ""
-#		define ALF_TEST_CC_TIME ""
-#		define ALF_TEST_CC_PASS ""
-#		define ALF_TEST_CC_FAIL ""
-#		define ALF_TEST_CC_TYPE ""
-#	else // Default non-truecolor theme
-#		define ALF_TEST_CC_SUITE ""
-#		define ALF_TEST_CC_NAME ""
-#		define ALF_TEST_CC_FILE ""
-#		define ALF_TEST_CC_LINE ""
-#		define ALF_TEST_CC_TIME ""
-#		define ALF_TEST_CC_PASS ""
-#		define ALF_TEST_CC_FAIL ""
-#		define ALF_TEST_CC_TYPE ""
-#	endif
-#else
-#	define ALF_TEST_CC(r, g, b) "\033[38;2;" #r ";" #g ";" #b "m"
-#	if defined(ALF_TEST_THEME_NONE)
-#		define ALF_TEST_CC_SUITE ""
-#		define ALF_TEST_CC_NAME ""
-#		define ALF_TEST_CC_FILE ""
-#		define ALF_TEST_CC_LINE ""
-#		define ALF_TEST_CC_TIME ""
-#		define ALF_TEST_CC_PASS ""
-#		define ALF_TEST_CC_FAIL ""
-#		define ALF_TEST_CC_TYPE ""
-#	elif defined(ALF_TEST_THEME_PALE)
-#		define ALF_TEST_CC_SUITE ALF_TEST_CC(137, 93, 226)
-#		define ALF_TEST_CC_NAME ALF_TEST_CC(91, 138, 224)
-#		define ALF_TEST_CC_FILE ALF_TEST_CC(120, 159, 230)
-#		define ALF_TEST_CC_LINE ALF_TEST_CC(66, 120, 220)
-#		define ALF_TEST_CC_TIME ALF_TEST_CC(255, 196, 88)
-#		define ALF_TEST_CC_PASS ALF_TEST_CC(77, 225, 169)
-#		define ALF_TEST_CC_FAIL ALF_TEST_CC(255, 71, 57)
-#		define ALF_TEST_CC_TYPE ALF_TEST_CC(189, 99, 197)
-#	elif defined(ALF_TEST_THEME_AUTUMN_FRUIT)
-#		define ALF_TEST_CC_SUITE ALF_TEST_CC(111, 88, 201)
-#		define ALF_TEST_CC_NAME ALF_TEST_CC(87, 74, 226)
-#		define ALF_TEST_CC_FILE ALF_TEST_CC(101, 69, 151)
-#		define ALF_TEST_CC_LINE ALF_TEST_CC(232, 142, 237)
-#		define ALF_TEST_CC_TIME ALF_TEST_CC(34, 42, 104)
-#		define ALF_TEST_CC_PASS ALF_TEST_CC(189, 228, 167)
-#		define ALF_TEST_CC_FAIL ALF_TEST_CC(216, 30, 91)
-#		define ALF_TEST_CC_TYPE ALF_TEST_CC(255, 199, 134)
-#	else // Default truecolor theme
-#		define ALF_TEST_CC_SUITE ALF_TEST_CC(111, 88, 201)
-#		define ALF_TEST_CC_NAME ALF_TEST_CC(34, 116, 165)
-#		define ALF_TEST_CC_FILE ALF_TEST_CC(241, 196, 15)
-#		define ALF_TEST_CC_LINE ALF_TEST_CC(247, 92, 3)
-#		define ALF_TEST_CC_TIME ALF_TEST_CC(27, 153, 139)
-#		define ALF_TEST_CC_PASS ALF_TEST_CC(0, 204, 102)
-#		define ALF_TEST_CC_FAIL ALF_TEST_CC(217, 3, 104)
-#		define ALF_TEST_CC_TYPE ALF_TEST_CC(244, 128, 194)
-#	endif
-#endif defined(ALF_TEST_NO_TRUECOLOR)
-
-// Library name color
-#if !defined(ALF_THEME_NONE)
-#	define ALF_TEST_CC_LOGO "\033[38;5;112m"
-#	define ALF_TEST_CC_C "\033[38;5;45m"
-#endif
-
-// ========================================================================== //
-// Private structures
-// ========================================================================== //
-
-/** Private test-state structure **/
-typedef struct tag_AlfTestState
-{
-	/** Suite that state represents **/
-	AlfTestSuite* suite;
-	/** Total check count **/
-	INT_TYPE count;
-	/** Failed check count **/
-	INT_TYPE failCount;
-} tag_AlfTestState;
-
-// -------------------------------------------------------------------------- //
-
-/** Private test-suite structure **/
-typedef struct tag_AlfTestSuite
-{
-	/** Setup function **/
-	PFN_SuiteSetup Setup;
-	/** Teardown function **/
-	PFN_SuiteTeardown Teardown;
-
-	/** Name of test suite **/
-	char* name;
-	/** User data **/
-	void* userData;
-
-	/** State for use during tests **/
-	AlfTestState state;
-
-	/** Test count **/
-	INT_TYPE testCount;
-	/** Tests**/
-	AlfTest* tests;
-} tag_AlfTestSuite;
-
-// ========================================================================== //
-// Private function implementations
-// ========================================================================== //
-
-/** Setup console for platforms that does not support escape sequences out of 
- * the box
- */
-static void _alfSetupConsoleMode()
-{
-#if defined(_WIN32)
-	static INT_TYPE isSetup = 0;
-	if (!isSetup)
-	{
-		// Enable virtual terminal processing for Color support
-		DWORD mode;
-		const HANDLE outputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-		if (outputHandle)
-		{
-			BOOL success = GetConsoleMode(outputHandle, &mode);
-			ALF_TEST_ASSERT(success, "Failet to get Windows console mode");
-			success = SetConsoleMode(outputHandle, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
-			ALF_TEST_ASSERT(success, "Failed to set Windows console mode");
-		}
-		isSetup = 1;
-	}
-#endif
-}
-
-// -------------------------------------------------------------------------- //
-
-static INT_TYPE _alfStringLength(const char* string)
-{
-	INT_TYPE length = 0;
-	while (string[length++] != 0) {}
-	return length - 1;
-}
-
-// -------------------------------------------------------------------------- //
-
-/** Return a copy of a nul-terminated c-string **/
-static char* _alfStringCopy(char* string)
-{
-	const size_t length = _alfStringLength(string);
-	char* buffer = ALF_TEST_ALLOC(length + 1);
-	memcpy(buffer, string, length + 1);
-	return buffer;
-}
-
-// -------------------------------------------------------------------------- //
-
-/** Returns a relative time from high-performance timer **/
-static TIME_TYPE _alfHighPerformanceTimer()
-{
-#if defined(_WIN32)
-	// Only query the performance counter frequency once
-	static TIME_TYPE frequency = 0;
-	if (frequency == 0)
-	{
-		LARGE_INTEGER f;
-		QueryPerformanceFrequency(&f);
-		frequency = f.QuadPart;
-	}
-
-	// Query the performance counter
-	LARGE_INTEGER c;
-	QueryPerformanceCounter(&c);
-	const TIME_TYPE counter = c.QuadPart;
-
-	// Convert counter to nanoseconds and return
-	const double s = (double)counter / frequency;
-	const TIME_TYPE ns = (TIME_TYPE)(s * 1e9);
-	return ns;
-#elif defined(__APPLE__)
-	static mach_timebase_info_data_t timebaseInfo;
-	if (timebaseInfo.denom == 0)
-	{
-		mach_timebase_info(&timebaseInfo);
-	}
-	TIME_TYPE time = mach_absolute_time();
-	return time * timebaseInfo.numer / timebaseInfo.denom;
-#else
-	NOT_IMPLEMENTED
-#endif
-}
-
-// -------------------------------------------------------------------------- //
-
-/** Default suite setup function that does nothing **/
-static void _alfDefaultSuiteSetup(AlfTestSuite* suite) {}
-
-// -------------------------------------------------------------------------- //
-
-/** Default suite teardown function that does nothing **/
-static void _alfDefaultSuiteTeardown(AlfTestSuite* suite) {}
-
-// -------------------------------------------------------------------------- //
-
-/** Print about-text **/
-static void _alfPrintAbout()
-{
-#if defined(ALF_TEST_PRINT_ABOUT)
-	printf(
-		"\n\t" ALF_TEST_CC_LOGO "AlfTest" ALF_TEST_CC_RESET " is a unit testing library for " 
-		ALF_TEST_CC_C "C" ALF_TEST_CC_RESET " and " ALF_TEST_CC_C "C++" ALF_TEST_CC_RESET " that is\n"
-		"\teasy to embed into a program without the need to link a\n"
-		"\tlibrary\n"
-		"\n\t" ALF_TEST_CC_LOGO "Version" ALF_TEST_CC_RESET " - 0.1.0\n\n"
-	);
-#endif
-}
-
-// ========================================================================== //
-// Function implementations
-// ========================================================================== //
-
-inline AlfTestSuite* alfCreateTestSuite(char* name, AlfTest* tests, INT_TYPE count)
-{
-	// Do required setup
-	_alfSetupConsoleMode();
-
-	// Allocate suite
-	AlfTestSuite* suite = ALF_TEST_ALLOC(sizeof(AlfTestSuite));
-	if (!suite) { return NULL; }
-
-	// Setup suite
-	suite->name = _alfStringCopy(name);
-	suite->Setup = _alfDefaultSuiteSetup;
-	suite->Teardown = _alfDefaultSuiteTeardown;
-	suite->state = (AlfTestState) { suite, 0, 0 };
-
-	// Setup tests
-	suite->testCount = count;
-	suite->tests = ALF_TEST_ALLOC(sizeof(AlfTest) * suite->testCount);
-	for (INT_TYPE i = 0; i < suite->testCount; i++)
-	{
-		suite->tests[i].name = _alfStringCopy(tests[i].name);
-		suite->tests[i].TestFunction = tests[i].TestFunction;
-	}
-
-	return suite;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void alfDestroyTestSuite(AlfTestSuite* suite)
-{
-	for (INT_TYPE i = 0; i < suite->testCount; i++)
-	{
-		ALF_TEST_FREE(suite->tests[i].name);
-	}
-	ALF_TEST_FREE(suite->tests);
-	ALF_TEST_FREE(suite->name);
-	ALF_TEST_FREE(suite);
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void alfSetSuiteUserData(AlfTestSuite* suite, void* data)
-{
-	suite->userData = data;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void* alfGetSuiteUserData(AlfTestSuite* suite)
-{
-	return suite->userData;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void* alfGetSuiteUserDataFromState(AlfTestState* state)
-{
-	return state->suite->userData;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void alfSetSuiteSetupCallback(AlfTestSuite* suite, PFN_SuiteSetup callback)
-{
-	suite->Setup = callback;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void alfSetSuiteTeardownCallback(AlfTestSuite* suite, PFN_SuiteTeardown callback)
-{
-	suite->Teardown = callback;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void alfClearSuiteSetupCallback(AlfTestSuite* suite)
-{
-	alfSetSuiteSetupCallback(suite, _alfDefaultSuiteSetup);
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void alfClearSuiteTeardownCallback(AlfTestSuite* suite)
-{
-	alfSetSuiteTeardownCallback(suite, _alfDefaultSuiteTeardown);
-}
-
-// -------------------------------------------------------------------------- //
-
-inline INT_TYPE alfRunSuite(AlfTestSuite* suite)
-{
-	AlfTestSuite* suites[1];
-	suites[0] = suite;
-	return alfRunSuites(suites, 1);
-}
-
-// -------------------------------------------------------------------------- //
-
-inline INT_TYPE alfRunSuites(AlfTestSuite** suites, INT_TYPE suiteCount)
-{
-	_alfPrintAbout();
-
-	// Run all suites
-	INT_TYPE totalCheckCount = 0;
-	INT_TYPE failCheckCount = 0;
-	INT_TYPE totalTestCount = 0;
-	INT_TYPE failTestCount = 0;
-	INT_TYPE failSuiteCount = 0;
-	const TIME_TYPE startTime = _alfHighPerformanceTimer();
-	for (INT_TYPE suiteIndex = 0; suiteIndex < suiteCount; suiteIndex++)
-	{
-		AlfTestSuite* suite = suites[suiteIndex];
-		suite->Setup(suite);
-		ALF_TEST_PRINTF(ALF_TEST_CC_SUITE "SUITE" ALF_TEST_CC_RESET " \"%s\"\n", suite->name);
-
-		// Run all tests in suite
-		const INT_TYPE suiteFailTestCountBefore = failTestCount;
-		const TIME_TYPE suiteStartTime = _alfHighPerformanceTimer();
-		for (INT_TYPE testIndex = 0; testIndex < suite->testCount; testIndex++)
-		{
-			// Clear state
-			suite->state.count = 0;
-			suite->state.failCount = 0;
-
-			// Run test
-			AlfTest* test = &suite->tests[testIndex];
-			ALF_TEST_PRINTF("Running " ALF_TEST_CC_NAME "%s" ALF_TEST_CC_RESET ":\n", test->name);
-			const TIME_TYPE timeBefore = _alfHighPerformanceTimer();
-			test->TestFunction(&suite->state);
-			const TIME_TYPE timeDelta = _alfHighPerformanceTimer() - timeBefore;
-			ALF_TEST_PRINTF("\tTest finished in " ALF_TEST_CC_TIME "%.3f" ALF_TEST_CC_RESET " ms\n", timeDelta / 1000000.0);
-
-			// Update suite state
-			totalTestCount++;
-			totalCheckCount += suite->state.count;
-			failCheckCount += suite->state.failCount;
-			if (suite->state.failCount > 0) { failTestCount++; }
-		}
-		const TIME_TYPE suiteElapsedTime = _alfHighPerformanceTimer() - suiteStartTime;
-		ALF_TEST_PRINTF("Suite finished in " ALF_TEST_CC_TIME "%.3f" ALF_TEST_CC_RESET " ms\n\n", suiteElapsedTime / 1000000.0);
-		if (failTestCount - suiteFailTestCountBefore > 0) { failSuiteCount++; }
-		suite->Teardown(suite);
-	}
-	const TIME_TYPE totalTime = _alfHighPerformanceTimer() - startTime;
-
-	// Print summary and return
-	const INT_TYPE passSuiteCount = suiteCount - failSuiteCount;
-	const INT_TYPE passCheckCount = totalCheckCount - failCheckCount;
-	const INT_TYPE passTestCount = totalTestCount - failTestCount;
-	ALF_TEST_PRINTF(ALF_TEST_CC_SUITE "SUMMARY\n" ALF_TEST_CC_RESET);
-	ALF_TEST_PRINTF("Type\t\tTotal\t\tPass\t\tFail\n");
-	ALF_TEST_PRINTF("Suite\t\t%i\t\t%i\t\t%i\n", suiteCount, passSuiteCount, failSuiteCount);
-	ALF_TEST_PRINTF("Test\t\t%i\t\t%i\t\t%i\n", totalTestCount, passTestCount, failTestCount);
-	ALF_TEST_PRINTF("Check\t\t%i\t\t%i\t\t%i\n", totalCheckCount, passCheckCount, failCheckCount);
-	ALF_TEST_PRINTF("Run completed in " ALF_TEST_CC_TIME "%f" ALF_TEST_CC_RESET " ms\n", totalTime / 1000000.0);
-
-	// Print final result
-	if (failTestCount == 0) { ALF_TEST_PRINTF(ALF_TEST_CC_PASS "ALL TESTS PASSED " ALF_TEST_CC_RESET "\n"); }
-	else { ALF_TEST_PRINTF(ALF_TEST_CC_FAIL "SOME TESTS FAILED" ALF_TEST_CC_RESET "\n"); }
-
-	// Return fail count
-	return failTestCount;
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void alfCheck(AlfTestState* state, INT_TYPE condition, char* conditionText, char* file, INT_TYPE line)
-{
-	alfCheckM(state, condition, conditionText, file, line, NULL);
-}
-
-// -------------------------------------------------------------------------- //
-
-inline void alfCheckM(AlfTestState* state, INT_TYPE condition, char* conditionText, char* file, INT_TYPE line, char* explanation)
-{
-	state->count++;
-	if (!condition)
-	{
-		state->failCount++;
-		ALF_TEST_PRINTF(
-			"\t" ALF_TEST_CC_FILE "%s" ALF_TEST_CC_RESET ":" ALF_TEST_CC_LINE "%i" ALF_TEST_CC_RESET ": "
-			ALF_TEST_CC_FAIL "FAIL" ALF_TEST_CC_RESET " - " ALF_TEST_CC_TYPE "%s" ALF_TEST_CC_RESET "%s%s%s\n", file, line,
-			conditionText,
-			explanation ? " - \"" : "",
-			explanation ? explanation : "",
-			explanation ? "\"" : ""
-		);
-	}
-	else
-	{
-		ALF_TEST_PRINTF(
-			"\t" ALF_TEST_CC_FILE "%s" ALF_TEST_CC_RESET ":" ALF_TEST_CC_LINE "%i" ALF_TEST_CC_RESET ": "
-			ALF_TEST_CC_PASS "PASS" ALF_TEST_CC_RESET " - " ALF_TEST_CC_TYPE "%s" ALF_TEST_CC_RESET "%s%s%s\n", file, line,
-			conditionText,
-			explanation ? " - \"" : "",
-			explanation ? explanation : "",
-			explanation ? "\"" : ""
-		);
-	}
-}
-
-// -------------------------------------------------------------------------- //
-
-inline char* alfLastIndexOf(char* string, char character)
-{
-	INT_TYPE length = _alfStringLength(string);
-	while (length >= 0)
-	{
-		if (string[length] == character) { return string + length; }
-		length--;
-	}
-	return string;
-}
-
-
-#endif // ALF_ALLOC_IMPLEMENTATION
 
 // ========================================================================== //
 // End of header

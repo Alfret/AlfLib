@@ -43,13 +43,17 @@ typedef uint32_t AlfBool;
 
 // -------------------------------------------------------------------------- //
 
-/** True value (1) **/
-#define ALF_TRUE 1
+#ifndef ALF_TRUE
+	/** Boolean value true **/
+#	define ALF_TRUE ((AlfBool)1)
+#endif
 
 // -------------------------------------------------------------------------- //
 
-/** False value (0) **/
-#define ALF_FALSE 0
+#ifndef ALF_FALSE
+	/** Boolean value false **/
+#	define ALF_FALSE ((AlfBool)0)
+#endif
 
 // -------------------------------------------------------------------------- //
 

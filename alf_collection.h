@@ -630,6 +630,15 @@ typedef struct tag_AlfHashTable AlfHashTable;
 // HashTable Functions
 // ========================================================================== //
 
+/** Create a hash table from a descriptor. Most of the callback in the 
+ * descriptor must be set for the hash table to work correctly. See the 
+ * descriptor documentation for more information.
+ * \note To create a hash table setup for using strings as keys, use the 
+ * creation function alfCreateHashTableSimple instead.
+ * \brief Create hash table.
+ * \param desc Hash table descriptor.
+ * \return Created hash table or NULL on failure.
+ */
 AlfHashTable* alfCreateHashTable(const AlfHashTableDesc* desc);
 
 // -------------------------------------------------------------------------- //
@@ -647,10 +656,23 @@ AlfHashTable* alfCreateHashTableSimple(
 
 // -------------------------------------------------------------------------- //
 
+/** Destroy a hash table and also all the remaining entries in it. The 
+ * destructors and cleanup functions set during creation of the has table is 
+ * used for this.
+ * \brief Destroy hash table.
+ * \param table Hash table to destroy.
+ */
 void alfDestroyHashTable(AlfHashTable* table);
 
 // -------------------------------------------------------------------------- //
 
+/** Insert a value into a hash table with the specified key.
+ * \brief Insert value into hash table.
+ * \param table Hash table to insert into.
+ * \param key Key to insert value with.
+ * \param value Value to insert.
+ * \return True if insertion succeeded, otherwise false.
+ */
 AlfBool alfHashTableInsert(
 	AlfHashTable* table, 
 	const void* key, 
@@ -658,32 +680,95 @@ AlfBool alfHashTableInsert(
 
 // -------------------------------------------------------------------------- //
 
+/** Returns the value in the list that corresponds to a specified key. If no 
+ * value exists with the key then the function returns NULL.
+ * \brief Returns value from hash table.
+ * \param table Hash table to get value from.
+ * \param key Key to lookup value with.
+ * \return Value that was found for the key or NULL if the key was not found.
+ */
 void* alfHashTableGet(AlfHashTable* table, const void* key);
 
 // -------------------------------------------------------------------------- //
 
+/** Remove a value that is stored with a specified key from a hash table.
+ * \brief Remove value from hash table.
+ * \param[in] table Hash table to remove value from.
+ * \param[in] key Key to lookup the value to remove.
+ * \param[in,out] valueOut Removed value, this is only valid if the function
+ * also returns true.
+ * \return True if the value could be removed otherwise false.
+ */
 AlfBool alfHashTableRemove(AlfHashTable* table, const void* key, void* valueOut);
 
 // -------------------------------------------------------------------------- //
 
+/** Returns whether or not a hash table contains a value stored with the 
+ * specified key.
+ * \brief Returns whether hash table contains key.
+ * \param table Hash table to check if contains key.
+ * \param key Key to check if table contains.
+ * \return True if the hash table contains the specified key otherwise false.
+ */
 AlfBool alfHasKey(AlfHashTable* table, const void* key);
 
 // -------------------------------------------------------------------------- //
 	
+/** Resize a hash table to the specified size. 
+ * \note This will move all values from the old table, which can be a costly 
+ * operation. Therefore call this as infrequently as possible, or make a large
+ * upfront resize.
+ * \note The size must be a power of two.
+ * \brief Resize hash table.
+ * \param table Hash table to resize.
+ * \param size Size to resize to. Must be a power of two.
+ */
 void alfHashTableResize(AlfHashTable* table, uint32_t size);
 
 // -------------------------------------------------------------------------- //
 
+/** Iterate a hash table and call the specfied callback for each key-value pair
+ * in the table. The order of the pairs are not specified.
+ * \brief Iterate hash table entries.
+ * \param table Hash table to iterate.
+ * \param iterateFunction Function to call for each entry during iteration.
+ * \return True if the iteration completed otherwise false. The iteration stops
+ * if the iterator function for an object returned false.
+ */
 AlfBool alfHashTableIterate(
 	AlfHashTable* table, 
 	PFN_AlfHashTableIterate iterateFunction);
 
 // -------------------------------------------------------------------------- //
 
+/** Set the maximum load factor of a hash table. This value determines how 
+ * filled the hash table will become before it's automatically resized. A value
+ * of 1.0 means filled. Insertion an item into a fill table will always result 
+ * in failure, meaning that this value cannot exceed 1.0.
+ * \brief Set maximum load factor of hash table.
+ * \param table Hash table to set maximum load factor of.
+ * \param loadFactor Load factor to set.
+ */
+void alfHashTableSetMaxLoadFactor(AlfHashTable* table, float loadFactor);
+
+// -------------------------------------------------------------------------- //
+
+/** Returns the current load factor of a hash table. This represents how filled
+ * the hash table is. 
+ * \brief Returns hash table load factor.
+ * \param table Hash table to get load factor of.
+ * \return Load factor of hash table.
+ */
 float alfHashTableGetLoadFactor(AlfHashTable* table);
 
 // -------------------------------------------------------------------------- //
 
+/** Returns the size of a hash table. This represents the current number of 
+ * entries stored in the table.
+ * \brief Returns size of hash table.
+ * \param table Hash table to get size of.
+ * \return Size of hash table.
+ */
 uint64_t alfHashTableGetSize(AlfHashTable* table);
 
 // ========================================================================== //

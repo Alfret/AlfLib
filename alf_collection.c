@@ -40,14 +40,18 @@
 // -------------------------------------------------------------------------- //
 
 /** Macro that returns minimum of two number **/
-#define ALF_MIN(a, b) a < b ? a : b
+#define ALF_COLLECTION_MIN(a, b) a < b ? a : b
 
 // ========================================================================== //
 // Private Functions
 // ========================================================================== //
 
+/** Default destructor function **/
 void alfDefaultDestructor(void* object) { }
 
+// -------------------------------------------------------------------------- //
+
+/** Default cleaner function **/
 void alfDefaultCleaner(const void* object) { }
 
 // ========================================================================== //
@@ -287,7 +291,7 @@ void alfListShrink(AlfList* list, uint64_t capacity)
 	ALF_COLLECTION_FREE(list->buffer);
 	list->capacity = capacity;
 	list->buffer = buffer;
-	list->size = ALF_MIN(list->capacity, list->size);
+	list->size = ALF_COLLECTION_MIN(list->capacity, list->size);
 }
 
 // -------------------------------------------------------------------------- //
@@ -567,7 +571,7 @@ void alfArrayListShrink(AlfArrayList* list, uint64_t capacity)
 	ALF_COLLECTION_FREE(list->buffer);
 	list->capacity = capacity;
 	list->buffer = buffer;
-	list->size = ALF_MIN(list->capacity, list->size);
+	list->size = ALF_COLLECTION_MIN(list->capacity, list->size);
 }
 
 // -------------------------------------------------------------------------- //
@@ -620,6 +624,8 @@ typedef struct tag_AlfHashTable
 	uint8_t* buckets;
 	/** Size of a bucket in bytes **/
 	uint32_t bucketSize;
+	/** Maximum load factor **/
+	float maxLoadFactor;
 
 	/** Size of value object in bytes **/
 	uint32_t valueSize;
@@ -910,6 +916,7 @@ AlfHashTable* alfCreateHashTable(const AlfHashTableDesc* desc)
 		desc->valueCleaner ? desc->valueCleaner : alfDefaultCleaner;
 
 	// Setup buckets
+	table->maxLoadFactor = ALF_DEFAULT_HASH_TABLE_LOAD_FACTOR_TRIGGER_RESIZE;
 	table->size = 0;
 	table->bucketSize = 
 		sizeof(AlfHashTableBucket) + table->valueSize;
@@ -962,7 +969,7 @@ AlfBool alfHashTableInsert(
 {
 	// Resize if load factor exceeds certain value
 	const float loadFactor = alfHashTableGetLoadFactor(table);
-	if (loadFactor >= ALF_DEFAULT_HASH_TABLE_LOAD_FACTOR_TRIGGER_RESIZE)
+	if (loadFactor >= table->maxLoadFactor)
 	{
 		alfHashTableResize(table, table->bucketCount << 1);
 	}
@@ -1074,6 +1081,13 @@ AlfBool alfHashTableIterate(AlfHashTable* table, PFN_AlfHashTableIterate iterate
 		}
 	}
 	return ALF_TRUE;
+}
+
+// -------------------------------------------------------------------------- //
+
+void alfHashTableSetMaxLoadFactor(AlfHashTable* table, float loadFactor)
+{
+	table->maxLoadFactor = loadFactor;
 }
 
 // -------------------------------------------------------------------------- //
