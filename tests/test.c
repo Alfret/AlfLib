@@ -245,6 +245,52 @@ void test_alfHashTableGet(AlfTestState* state)
 	alfDestroyHashTable(table);
 }
 
+// -------------------------------------------------------------------------- //
+
+void test_alfHashTableRemove(AlfTestState* state)
+{
+	// Create table and insert values for retrieval
+	AlfHashTable* table = alfCreateHashTableSimple(sizeof(uint32_t), NULL);
+	for (uint32_t i = 0; i < fruitNamesCount; i++)
+	{
+		const AlfBool success =
+			alfHashTableInsert(table, fruitNames[i], &numbers0through79[i]);
+	}
+
+	// Remove values on even indices
+	for (uint32_t i = 0; i < fruitNamesCount; i++)
+	{
+		if (i % 2 == 0)
+		{
+			alfHashTableRemove(table, fruitNames[i], NULL);
+		}
+	}
+
+	// Check that value are in list
+	for (uint32_t i = 0; i < fruitNamesCount; i++)
+	{
+		uint32_t* value = alfHashTableGet(table, fruitNames[i]);
+		if (i % 2 == 0)
+		{
+			ALF_CHECK_NULL_R(state, value,
+				"Removed value should not be retrievable from table");
+		}
+		else
+		{
+			ALF_CHECK_NOT_NULL_R(state, value,
+				"Check that key is actually in list");
+			if (value)
+			{
+				ALF_CHECK_TRUE_R(state, *value == numbers0through79[i],
+					"Check that value returned from 'get' matches the value set");
+			}
+		}
+	}
+
+	// Destroy table
+	alfDestroyHashTable(table);
+}
+
 // ========================================================================== //
 // Main Function
 // ========================================================================== //
@@ -273,10 +319,11 @@ int main()
 	AlfTest testsCollection[] = {
 		{ "Create - Hash Table", test_alfCreateHashTable },
 		{ "Insert - Hash Table", test_alfHashTableInsert },
-		{ "Get - Hash Table", test_alfHashTableGet }
+		{ "Get - Hash Table", test_alfHashTableGet },
+		{ "Remove - Hash Table", test_alfHashTableRemove }
 	};
 	AlfTestSuite* suiteCollection =
-		alfCreateTestSuite("Collection", testsCollection, 3);
+		alfCreateTestSuite("Collection", testsCollection, 4);
 
 	// Run suites
 	AlfTestSuite* suites[] = {

@@ -424,7 +424,7 @@ void alfArrayListAdd(AlfArrayList* list, const void* object)
 
 // -------------------------------------------------------------------------- //
 
-void alfArrayListPrepend(AlfArrayList* list, void* object)
+void alfArrayListPrepend(AlfArrayList* list, const void* object)
 {
 	if (list->size >= list->capacity)
 	{
@@ -442,7 +442,7 @@ void alfArrayListPrepend(AlfArrayList* list, void* object)
 
 // -------------------------------------------------------------------------- //
 
-void alfArrayListInsert(AlfArrayList* list, void* object, uint64_t index)
+void alfArrayListInsert(AlfArrayList* list, const void* object, uint64_t index)
 {
 	if (index == 0)
 	{
@@ -595,6 +595,125 @@ uint8_t* alfArrayListGetData(AlfArrayList* list)
 	return list->buffer;
 }
 
+// ========================================================================== //
+// Stack Structures
+// ========================================================================== //
+
+typedef struct tag_AlfStack
+{
+	/** Capacity **/
+	uint32_t capacity;
+	/** Stack size**/
+	uint32_t size;
+	/** Data buffer **/
+	uint8_t* buffer;
+
+	/** Object size**/
+	uint32_t objectSize;
+
+	/** Object cleaner **/
+	PFN_AlfCollectionCleaner objectCleaner;
+} tag_AlfStack;
+
+// ========================================================================== //
+// Stack Functions
+// ========================================================================== //
+
+AlfStack* alfCreateStack(const AlfStackDesc* desc)
+{
+	ALF_COLLECTION_ASSERT(
+		desc->objectSize != 0,
+		"Size of objects in stack must be greater than zero"
+	);
+
+	AlfStack* stack = ALF_COLLECTION_ALLOC(sizeof(AlfStack));
+	if (!stack) { return NULL; }
+
+	stack->capacity = desc->capacity;
+	stack->size = 0;
+	stack->objectSize = desc->objectSize;
+	stack->objectCleaner = desc->objectCleaner;
+	stack->buffer = ALF_COLLECTION_ALLOC(stack->objectSize * stack->capacity);
+	if (!stack->buffer)
+	{
+		ALF_COLLECTION_FREE(stack);
+		return NULL;
+	}
+
+	return stack;
+}
+
+// -------------------------------------------------------------------------- //
+
+void alfDestroyStack(AlfStack* stack)
+{
+	for (uint32_t i = 0; i < stack->size; i++)
+	{
+		void* object = stack->buffer + (stack->objectSize * i);
+		stack->objectCleaner(object);
+	}
+	ALF_COLLECTION_FREE(stack->buffer);
+	ALF_COLLECTION_FREE(stack);
+}
+
+// -------------------------------------------------------------------------- //
+
+AlfBool alfStackPush(AlfStack* stack, const void* object)
+{
+	if (stack->capacity <= stack->size)
+	{
+		const AlfBool success = alfStackResize(stack, stack->size * 2);
+		if (!success) { return ALF_FALSE; }
+	}
+	memcpy(
+		stack->buffer + (stack->objectSize * stack->size++), 
+		object, 
+		stack->objectSize
+	);
+	return ALF_TRUE;
+}
+
+// -------------------------------------------------------------------------- //
+
+AlfBool alfStackPop(AlfStack* stack, void* objectOut)
+{
+	if (stack->size < 1) { return ALF_FALSE; }
+	memcpy(
+		objectOut,
+		stack->buffer + (stack->objectSize * --stack->size),
+		stack->objectSize
+	);
+	return ALF_TRUE;
+}
+
+// -------------------------------------------------------------------------- //
+
+AlfBool alfStackResize(AlfStack* stack, uint32_t size)
+{
+	// Allocate block and copy data
+	uint8_t* buffer = ALF_COLLECTION_ALLOC(size * stack->objectSize);
+	if (!buffer) { return ALF_FALSE; }
+	const uint32_t sizeAfter = ALF_COLLECTION_MIN(size, stack->size);
+	memcpy(buffer, stack->buffer, sizeAfter * stack->objectSize);
+
+	// Clean object that are after end of old buffer
+	const int32_t freeCount = stack->size - sizeAfter;
+	for (int32_t i = 0; i < freeCount; i++)
+	{
+		void* object = stack->buffer + (stack->objectSize * (sizeAfter + i));
+		stack->objectCleaner(object);
+	}
+
+	stack->size = sizeAfter;
+	return ALF_TRUE;
+}
+
+// -------------------------------------------------------------------------- //
+
+uint32_t alfStackGetSize(AlfStack* stack)
+{
+	return stack->size;
+}
 
 // ========================================================================== //
 // HashTable Structures
@@ -732,6 +851,36 @@ static AlfHashTableBucket* alfHashTableGetBucketAtIndex(
 
 // -------------------------------------------------------------------------- //
 
+/** Creates a hash that is valid for the hash table from the hash function that
+ * the user specified at hash table creation. This function makes sure that the
+ * MSB are always clear (Signifies tombstones) and that 0 is never returned as a
+ * valid hash (Signifies empty bucket). **/
+static uint32_t alfHashTableGetKeyHash(AlfHashTable* table, const void* key)
+{
+	// Clear MSB and make sure hash is never 0 (Signifies empty bucket)
+	uint32_t hash = table->hashFunction(key);
+	hash &= 0x7FFFFFFF;
+	return hash ? hash : 1;
+}
+
+// -------------------------------------------------------------------------- //
+
+/** Returns whether or not a hash value represents a tombstone **/
+static AlfBool alfHashTableIsTombstone(uint32_t hash)
+{
+	return (hash & 0x80000000) != 0;
+}
+
+// -------------------------------------------------------------------------- //
+
+/** Returns the tombstone value from a hash value **/
+static uint32_t alfHashTableMarkTombstone(uint32_t hash)
+{
+	return hash |= 0x80000000;
+}
+
+// -------------------------------------------------------------------------- //
+
 /** Sets the value of a bucket by copying all bytes **/
 static void alfHashTableSetBucketValue(
 	AlfHashTable* table,
@@ -795,7 +944,7 @@ static AlfBool alfHashTableInsertKeyValue(
 	memcpy(value, inValue, table->valueSize);
 
 	// Find index to place bucket data at
-	uint32_t hash = table->hashFunction(key);
+	uint32_t hash = alfHashTableGetKeyHash(table, key);
 	uint32_t index = ALF_MOD_POWER_OF_TWO(hash, table->bucketCount);
 	int32_t distance = 0;
 	while (ALF_TRUE)
@@ -818,6 +967,15 @@ static AlfBool alfHashTableInsertKeyValue(
 			table, otherBucket->hash, index);
 		if (slotDistance < distance)
 		{
+			// If tombstone then replace
+			if (alfHashTableIsTombstone(otherBucket->hash))
+			{
+				otherBucket->hash = hash;
+				otherBucket->key = key;
+				alfHashTableSetBucketValue(table, otherBucket, value);
+				return ALF_TRUE;
+			}
+
 			// Store bucket entries temporarily
 			const uint32_t _hash = otherBucket->hash;
 			void* _key = otherBucket->key;
@@ -853,7 +1011,7 @@ void* alfHashTableFindIndex(
 	const void* key, 
 	uint32_t* indexOut)
 {
-	const uint32_t hash = table->hashFunction(key);
+	const uint32_t hash = alfHashTableGetKeyHash(table, key);
 	uint32_t index = ALF_MOD_POWER_OF_TWO(hash, table->bucketCount);
 	int32_t distance = 0;
 	while (ALF_TRUE)
@@ -952,12 +1110,16 @@ void alfDestroyHashTable(AlfHashTable* table)
 	{
 		const AlfHashTableBucket* bucket =
 			alfHashTableGetBucketAtIndex(table->buckets, table->bucketSize, i);
-		if (bucket->hash)
+		if (bucket->hash != 0 && !alfHashTableIsTombstone(bucket->hash))
 		{
 			table->keyDestructor(bucket->key);
 			table->valueCleaner(bucket->value);
 		}
 	}
+
+	// Free table
+	ALF_COLLECTION_FREE(table->buckets);
+	ALF_COLLECTION_FREE(table);
 }
 
 // -------------------------------------------------------------------------- //
@@ -1002,12 +1164,15 @@ AlfBool alfHashTableRemove(AlfHashTable* table, const void* key, void* valueOut)
 	// Find value and index, return immediately if value was not found
 	uint32_t index;
 	void* value =  alfHashTableFindIndex(table, key, &index);
-	if (!value) { return ALF_FALSE; }
+	if (!value)
+	{
+		return ALF_FALSE;
+	}
 
 	// Retrieve bucket, reset hash and write value to user buffer
 	AlfHashTableBucket* bucket = 
 		alfHashTableGetBucketAtIndex(table->buckets, table->bucketSize, index);
-	bucket->hash = 0;
+	bucket->hash = alfHashTableMarkTombstone(bucket->hash);
 	table->keyDestructor(bucket->key);
 	if (valueOut) 
 	{
@@ -1047,7 +1212,7 @@ void alfHashTableResize(AlfHashTable* table, uint32_t size)
 		AlfHashTableBucket* oldBucket = alfHashTableGetBucketAtIndex(
 			oldBuckets, table->bucketSize, i);
 		const uint32_t hash = oldBucket->hash;
-		if (hash != 0)
+		if (hash != 0 && !alfHashTableIsTombstone(hash))
 		{
 			void* key = oldBucket->key;
 			void* value = oldBucket->value;
@@ -1072,7 +1237,7 @@ AlfBool alfHashTableIterate(AlfHashTable* table, PFN_AlfHashTableIterate iterate
 			alfHashTableGetBucketAtIndex(table->buckets, table->bucketSize, i);
 
 		// Call the iterator function for key-value pair if hash is valid
-		if (bucket->hash != 0)
+		if (bucket->hash != 0 && !alfHashTableIsTombstone(bucket->hash))
 		{
 			const AlfBool cont = iterateFunction(
 				table, index, bucket->key, (void*)bucket->value);
