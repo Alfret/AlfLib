@@ -28,7 +28,7 @@
 
 // Standard headers
 #include <string.h>
-#include <malloc.h>
+#include <memory.h>
 
 // ========================================================================== //
 // Macro Declarations
