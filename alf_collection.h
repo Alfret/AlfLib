@@ -182,7 +182,7 @@ AlfList* alfCreateList(const AlfListDesc* desc);
  * capacity and destructor set.
  * \return Created list or NULL on failure.
  */
-AlfList* alfCreateListSimple();
+AlfList* alfCreateListSimple(void);
 
 // -------------------------------------------------------------------------- //
 

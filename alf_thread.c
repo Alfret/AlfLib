@@ -26,6 +26,9 @@
 // Header Includes
 // ========================================================================== //
 
+// Standard headers
+#include <memory.h>
+
 // Platform detection
 #if defined(_WIN32) || defined(_WIN64) || defined(__MINGW64__)
 #	define ALF_THREAD_TARGET_WINDOWS
@@ -39,11 +42,16 @@
 #	include <semaphore.h>
 #	include <zconf.h>
 #	include <errno.h>
+#	include <unistd.h>
 #elif defined (__APPLE__)
 #	define ALF_THREAD_TARGET_APPLE
+#	if __has_feature(objc_arc)
+#		define ALF_THREAD_APPLE_ARC
+#	endif
 #	define ALF_THREAD_PTHREAD
 #	include <dispatch/dispatch.h>
 #	include <errno.h>
+#	include <unistd.h>
 #else
 UNSUPPORTED_PLATFORM
 #endif
@@ -129,7 +137,7 @@ typedef struct tag_AlfReadWriteLock
 #if defined(ALF_THREAD_TARGET_WINDOWS)
 	SRWLOCK handle;
 #elif defined(ALF_THREAD_PTHREAD)
-	pthread_rwlock handle;
+	pthread_rwlock_t handle;
 #endif
 } tag_AlfReadWriteLock;
 
@@ -370,11 +378,11 @@ static void* _alfPthreadThreadStart(void* argument)
 	AlfThread* thread = alfThisThread();
 	if (thread->detached)
 	{
-		_alfFreeThreadHandle(thread);
+		alfFreeThreadHandle(thread);
 	}
 
 	// Return result and end thread
-	return result;
+	return (void*)(uint64_t)result;
 }
 
 #endif // defined(ALF_THREAD_PTHREAD)
@@ -605,7 +613,7 @@ AlfBool alfJoinThreadTry(AlfThread* thread, uint32_t* exitCodeOut)
 	exitCode = _exitCode;
 	CloseHandle(thread->handle);
 #elif defined(ALF_THREAD_TARGET_APPLE)
-	ALF_THREAD_ASSERT(0, "Apple systems currently does not support try-join")
+	ALF_THREAD_ASSERT(0, "Apple systems currently does not support try-join");
 #elif defined(ALF_THREAD_PTHREAD)
 	void* result;
 	int result = pthread_tryjoin_np(thread->handle, &result);
@@ -759,7 +767,7 @@ void alfSleepThread(uint64_t milliseconds)
 	Sleep((DWORD)milliseconds);
 #elif defined(ALF_THREAD_PTHREAD)
 	struct timespec time;
-	_alfMillisecondsToTimespec(milliseconds, &time);
+	_alfMillisecondsToTimespec((uint32_t)milliseconds, &time);
 	nanosleep(&time, NULL);
 #endif
 }
@@ -911,7 +919,7 @@ void alfDeleteSemaphore(AlfSemaphore* semaphore)
 	CloseHandle(semaphore->handle);
 #elif defined(ALF_THREAD_TARGET_LINUX)
 	sem_destroy(&semaphore->handle);
-#elif defined(ALF_THREAD_TARGET_APPLE)
+#elif defined(ALF_THREAD_TARGET_APPLE) && !defined(ALF_THREAD_APPLE_ARC)
 	dispatch_release(semaphore->handle);
 #endif
 
@@ -1124,7 +1132,7 @@ AlfBool alfAcquireMutexTry(AlfMutex* mutex)
 	}
 	return TryAcquireSRWLockExclusive(&mutex->srwlock) != 0;
 #elif defined(ALF_THREAD_PTHREAD)
-	int result = pthread_mutex_trylock(&mutex->handle.mutex);
+	int result = pthread_mutex_trylock(&mutex->handle);
 	return result == 0;
 #endif
 }
@@ -1226,7 +1234,7 @@ void alfWaitConditionVariable(
 	ALF_THREAD_ASSERT(result != 0, "Failed to wait on condition variable");
 #elif defined(ALF_THREAD_PTHREAD)
 	int result = 
-		pthread_cond_wait(&conditionVariable->handle, ashGetMutexHandle(mutex));
+		pthread_cond_wait(&conditionVariable->handle, &mutex->handle);
 	ALF_THREAD_ASSERT(result != EINVAL, 
 		"Invalid condition variable handle. This is an internal error");
 	ALF_THREAD_ASSERT(result != EPERM, 
@@ -1292,7 +1300,7 @@ AlfReadWriteLock* alfCreateReadWriteLock()
 	SRWLOCK handle;
 	InitializeSRWLock(&handle);
 #elif defined(ALF_THREAD_PTHREAD)
-	pthread_rwlock handle;
+	pthread_rwlock_t handle;
 	int32_t result = pthread_rwlock_init(&handle, NULL);
 	if (result != 0)
 	{
@@ -1313,7 +1321,7 @@ void alfDestroyReadWriteLock(AlfReadWriteLock* lock)
 	if (!lock) { return; }
 
 #if defined(ALF_THREAD_PTHREAD)
-	int32_t result = pthread_rwlock_destroy(&read_write_lock->handle);
+	int32_t result = pthread_rwlock_destroy(&lock->handle);
 
 	ALF_THREAD_ASSERT(result != EINVAL,
 		"Invalid read-write lock handle. This is an internal error");
@@ -1334,7 +1342,7 @@ void alfAcquireReadLock(AlfReadWriteLock* lock)
 #if defined(ALF_THREAD_TARGET_WINDOWS)
 	AcquireSRWLockShared(&lock->handle);
 #elif defined(ALF_THREAD_PTHREAD)
-	int32_t result = pthread_rwlock_rdlock(&read_write_lock->handle);
+	int32_t result = pthread_rwlock_rdlock(&lock->handle);
 	ALF_THREAD_ASSERT(result != EINVAL,
 		"Invalid read-write lock handle. This is an internal error");
 	ALF_THREAD_ASSERT(result != EDEADLK,
@@ -1352,7 +1360,7 @@ void alfReleaseReadLock(AlfReadWriteLock* lock)
 #if defined(ALF_THREAD_TARGET_WINDOWS)
 	ReleaseSRWLockShared(&lock->handle);
 #elif defined(ALF_THREAD_PTHREAD)
-	int32_t result = pthread_rwlock_unlock(&read_write_lock->handle);
+	int32_t result = pthread_rwlock_unlock(&lock->handle);
 	ALF_THREAD_ASSERT(result != EINVAL,
 		"Invalid read-write lock handle. This is an internal error");
 	ALF_THREAD_ASSERT(result != EPERM,
@@ -1369,7 +1377,7 @@ void alfAcquireWriteLock(AlfReadWriteLock* lock)
 #if defined(ALF_THREAD_TARGET_WINDOWS)
 	AcquireSRWLockExclusive(&lock->handle);
 #elif defined(ALF_THREAD_PTHREAD)
-	int32_t result = pthread_rwlock_wrlock(&read_write_lock->handle);
+	int32_t result = pthread_rwlock_wrlock(&lock->handle);
 	ALF_THREAD_ASSERT(result != EINVAL,
 		"Invalid read-write lock handle. This is an internal error");
 	ALF_THREAD_ASSERT(result != EDEADLK,
@@ -1387,7 +1395,7 @@ void alfReleaseWriteLock(AlfReadWriteLock* lock)
 #if defined(ALF_THREAD_TARGET_WINDOWS)
 	ReleaseSRWLockExclusive(&lock->handle);
 #elif defined(ALF_THREAD_PTHREAD)
-	int32_t result = pthread_rwlock_unlock(&read_write_lock->handle);
+	int32_t result = pthread_rwlock_unlock(&lock->handle);
 	ALF_THREAD_ASSERT(result != EINVAL,
 		"Invalid read-write lock handle. This is an internal error");
 	ALF_THREAD_ASSERT(result != EPERM,
@@ -1451,7 +1459,7 @@ void alfStoreTLS(AlfTLSHandle* handle, void* data)
 	const BOOL result = TlsSetValue(handle->handle, data);
 	ALF_THREAD_ASSERT(result != 0, "Failed to store data in TLS");
 #elif defined(ALF_THREAD_PTHREAD)
-	pthread_setspecific(tls.handle, data);
+	pthread_setspecific(handle->handle, data);
 #endif
 }
 
@@ -1540,7 +1548,7 @@ void* alfAtomicCompareExchangePointer(
 		pointer,
 		&comparand,
 		value,
-		ASH_FALSE,
+		ALF_FALSE,
 		__ATOMIC_SEQ_CST,
 		__ATOMIC_SEQ_CST
 	);
@@ -1574,7 +1582,7 @@ int32_t alfAtomicLoadS32(int32_t* integer)
 		(LONG)0, (LONG)0
 	);
 #elif defined(ALF_THREAD_TARGET_LINUX) || defined(ALF_THREAD_TARGET_APPLE)
-	return (s32)__atomic_load_n(integer, __ATOMIC_SEQ_CST);
+	return (int32_t)__atomic_load_n(integer, __ATOMIC_SEQ_CST);
 #endif
 }
 
@@ -1588,7 +1596,7 @@ int32_t alfAtomicExchangeS32(int32_t* integer, int32_t value)
 		(LONG)value
 	);
 #elif defined(ALF_THREAD_TARGET_LINUX) || defined(ALF_THREAD_TARGET_APPLE)
-	return (s32)__atomic_exchange_n(
+	return (int32_t)__atomic_exchange_n(
 		integer,
 		value,
 		__ATOMIC_SEQ_CST
@@ -1614,7 +1622,7 @@ int32_t alfAtomicCompareExchangeS32(
 		integer,
 		&comparand,
 		value,
-		ASH_FALSE,
+		ALF_FALSE,
 		__ATOMIC_SEQ_CST,
 		__ATOMIC_SEQ_CST
 	);
@@ -1629,7 +1637,7 @@ int32_t alfAtomicIncrementS32(int32_t* integer)
 #if defined(ALF_THREAD_TARGET_WINDOWS)
 	return InterlockedIncrement((volatile LONG*)integer);
 #elif defined(ALF_THREAD_TARGET_LINUX) || defined(ALF_THREAD_TARGET_APPLE)
-	return (s32)__atomic_add_fetch(
+	return (int32_t)__atomic_add_fetch(
 		integer,
 		1,
 		__ATOMIC_SEQ_CST
@@ -1644,7 +1652,7 @@ int32_t alfAtomicDecrementS32(int32_t* integer)
 #if defined(ALF_THREAD_TARGET_WINDOWS)
 	return InterlockedDecrement((volatile LONG*)integer);
 #elif defined(ALF_THREAD_TARGET_LINUX) || defined(ALF_THREAD_TARGET_APPLE)
-	return (s32)__atomic_sub_fetch(
+	return (int32_t)__atomic_sub_fetch(
 		integer,
 		1,
 		__ATOMIC_SEQ_CST
@@ -1657,13 +1665,13 @@ int32_t alfAtomicDecrementS32(int32_t* integer)
 int32_t alfAtomicAddS32(int32_t* integer, int32_t value)
 {
 #if defined(ALF_THREAD_TARGET_WINDOWS)
-	const uint32_t previous = InterlockedExchangeAdd(
+	const int32_t previous = InterlockedExchangeAdd(
 		(volatile LONG*)integer,
 		(LONG)value
 	);
 	return previous + value;
 #elif defined(ALF_THREAD_TARGET_LINUX) || defined(ALF_THREAD_TARGET_APPLE)
-	return (s32)__atomic_add_fetch(
+	return (int32_t)__atomic_add_fetch(
 		integer,
 		value,
 		__ATOMIC_SEQ_CST
@@ -1676,13 +1684,13 @@ int32_t alfAtomicAddS32(int32_t* integer, int32_t value)
 int32_t alfAtomicSubS32(int32_t* integer, int32_t value)
 {
 #if defined(ALF_THREAD_TARGET_WINDOWS)
-	const uint32_t previous = InterlockedExchangeAdd(
+	const int32_t previous = InterlockedExchangeAdd(
 		(volatile LONG*)integer,
 		-((LONG)value)
 	);
 	return previous - value;
 #elif defined(ALF_THREAD_TARGET_LINUX) || defined(ALF_THREAD_TARGET_APPLE)
-	return (s32)__atomic_sub_fetch(
+	return (int32_t)__atomic_sub_fetch(
 		integer,
 		value,
 		__ATOMIC_SEQ_CST
@@ -1716,7 +1724,7 @@ uint32_t alfAtomicLoadU32(uint32_t* integer)
 		(LONG)0, (LONG)0
 	);
 #elif defined(ALF_THREAD_TARGET_LINUX) || defined(ALF_THREAD_TARGET_APPLE)
-	return (u32)__atomic_load_n(integer, __ATOMIC_SEQ_CST);
+	return (uint32_t)__atomic_load_n(integer, __ATOMIC_SEQ_CST);
 #endif
 }
 
@@ -1730,7 +1738,7 @@ uint32_t alfAtomicExchangeU32(uint32_t* integer, uint32_t value)
 		(LONG)value
 	);
 #elif defined(ALF_THREAD_TARGET_LINUX) || defined(ALF_THREAD_TARGET_APPLE)
-	return (u32)__atomic_exchange_n(
+	return (uint32_t)__atomic_exchange_n(
 		integer,
 		value,
 		__ATOMIC_SEQ_CST
@@ -1756,7 +1764,7 @@ uint32_t alfAtomicCompareExchangeU32(
 		integer,
 		&comparand,
 		value,
-		ASH_FALSE,
+		ALF_FALSE,
 		__ATOMIC_SEQ_CST,
 		__ATOMIC_SEQ_CST
 	);
@@ -1771,7 +1779,7 @@ uint32_t alfAtomicIncrementU32(uint32_t* integer)
 #if defined(ALF_THREAD_TARGET_WINDOWS)
 	return InterlockedIncrement((volatile LONG*)integer);
 #elif defined(ALF_THREAD_TARGET_LINUX) || defined(ALF_THREAD_TARGET_APPLE)
-	return (u32)__atomic_add_fetch(
+	return (uint32_t)__atomic_add_fetch(
 		integer,
 		1,
 		__ATOMIC_SEQ_CST
@@ -1786,7 +1794,7 @@ uint32_t alfAtomicDecrementU32(uint32_t* integer)
 #if defined(ALF_THREAD_TARGET_WINDOWS)
 	return InterlockedDecrement((volatile LONG*)integer);
 #elif defined(ALF_THREAD_TARGET_LINUX) || defined(ALF_THREAD_TARGET_APPLE)
-	return (u32)__atomic_sub_fetch(
+	return (uint32_t)__atomic_sub_fetch(
 		integer,
 		1,
 		__ATOMIC_SEQ_CST
@@ -1805,7 +1813,7 @@ uint32_t alfAtomicAddU32(uint32_t* integer, uint32_t value)
 	);
 	return previous + value;
 #elif defined(ALF_THREAD_TARGET_LINUX) || defined(ALF_THREAD_TARGET_APPLE)
-	return (u32)__atomic_add_fetch(
+	return (uint32_t)__atomic_add_fetch(
 		integer,
 		value,
 		__ATOMIC_SEQ_CST
@@ -1824,7 +1832,7 @@ uint32_t alfAtomicSubU32(uint32_t* integer, uint32_t value)
 	);
 	return previous - value;
 #elif defined(ALF_THREAD_TARGET_LINUX) || defined(ALF_THREAD_TARGET_APPLE)
-	return (u32)__atomic_sub_fetch(
+	return (uint32_t)__atomic_sub_fetch(
 		integer,
 		value,
 		__ATOMIC_SEQ_CST
@@ -1843,7 +1851,7 @@ uint32_t alfGetHardwareThreadCount()
 	GetSystemInfo(&info);
 	return (uint32_t)info.dwNumberOfProcessors;
 #elif defined(ALF_THREAD_TARGET_LINUX) || defined(ALF_THREAD_TARGET_APPLE)
-	return (uint32_t)get_nprocs();
+	return (uint32_t)sysconf(_SC_NPROCESSORS_CONF);
 #endif
 }
 
@@ -1916,12 +1924,12 @@ int32_t alfGetCacheLineSize(AlfCache type)
 	}
 	ALF_THREAD_FREE(procInfos);
 	return cacheLineSize;
-#elif defined(ALF_THREAD_TARGET_LINUX) || defined(ALF_THREAD_TARGET_APPLE)
+#elif defined(ALF_THREAD_TARGET_LINUX)
 	switch (type)
 	{
-		case ALF_CACHE_L1_DATA: 
+		case ALF_CACHE_L1D:
 			return (int32_t)sysconf(_SC_LEVEL1_DCACHE_LINESIZE);
-		case ALF_CACHE_L1_INSTRUCTION:
+		case ALF_CACHE_L1I:
 			return (int32_t)sysconf(_SC_LEVEL1_ICACHE_LINESIZE);
 		case ALF_CACHE_L2:
 			return (int32_t)sysconf(_SC_LEVEL2_CACHE_LINESIZE);
@@ -1929,8 +1937,10 @@ int32_t alfGetCacheLineSize(AlfCache type)
 			return (int32_t)sysconf(_SC_LEVEL3_CACHE_LINESIZE);
 		case ALF_CACHE_L4:
 			return (int32_t)sysconf(_SC_LEVEL4_CACHE_LINESIZE);
-		default: 
+		default:
 			return -1;
 	}
+#elif defined(ALF_THREAD_TARGET_APPLE)
+	return 0;
 #endif
 }

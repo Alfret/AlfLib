@@ -30,10 +30,18 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <assert.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <memory.h>
 
 // Windows headers
 #if defined(_WIN32)
 #	include <Windows.h>
+#endif
+
+// MacOS headers
+#if defined(__APPLE__)
+#	include <mach/mach_time.h>
 #endif
 
 // ========================================================================== //
@@ -54,7 +62,7 @@
 #endif
 
 // Color macros for different themes and support
-#if defined(ALF_TEST_NO_TRUECOLOR)
+#if defined(ALF_TEST_NO_TRUECOLOR) || defined(ALF_THEME_NONE)
 #	if defined(ALF_THEME_NONE)
 #		define ALF_TEST_CC_SUITE ""
 #		define ALF_TEST_CC_NAME ""
@@ -131,7 +139,7 @@
 #		define ALF_TEST_CC_FAIL ALF_TEST_CC(217, 3, 104)
 #		define ALF_TEST_CC_TYPE ALF_TEST_CC(244, 128, 194)
 #	endif
-#endif defined(ALF_TEST_NO_TRUECOLOR)
+#endif // defined(ALF_TEST_NO_TRUECOLOR)
 
 // Library name color
 #if !defined(ALF_THEME_NONE)
@@ -315,7 +323,7 @@ static void alfTestCheckInternal(
 	BOOL_TYPE condition,
 	const char* message, 
 	const char* file, 
-	uint32_t line,
+	INT_TYPE line,
 	const char* explanation)
 {
 	state->count++;
@@ -324,7 +332,7 @@ static void alfTestCheckInternal(
 		"\t" ALF_TEST_CC_FILE "%s" ALF_TEST_CC_RESET ":" ALF_TEST_CC_LINE "%i" 
 		ALF_TEST_CC_RESET ": %s%s" ALF_TEST_CC_RESET " - " ALF_TEST_CC_TYPE "%s" 
 		ALF_TEST_CC_RESET "%s%s%s\n", 
-		file, line,
+		file, (int)line,
 		condition ? ALF_TEST_CC_PASS : ALF_TEST_CC_FAIL,
 		condition ? "PASS" : "FAIL",
 		message,
@@ -522,11 +530,11 @@ INT_TYPE alfRunSuites(AlfTestSuite** suites, INT_TYPE suiteCount)
 	printf(ALF_TEST_CC_SUITE "SUMMARY\n" ALF_TEST_CC_RESET);
 	printf("Type\t\tTotal\t\tPass\t\tFail\n");
 	printf("Suite\t\t%i\t\t%i\t\t%i\n", 
-		suiteCount, passSuiteCount, failSuiteCount);
+		(int32_t)suiteCount, (int32_t)passSuiteCount, (int32_t)failSuiteCount);
 	printf("Test\t\t%i\t\t%i\t\t%i\n", 
-		totalTestCount, passTestCount, failTestCount);
+		(int32_t)totalTestCount, (int32_t)passTestCount, (int32_t)failTestCount);
 	printf("Check\t\t%i\t\t%i\t\t%i\n", 
-		totalCheckCount, passCheckCount, failCheckCount);
+		(int32_t)totalCheckCount, (int32_t)passCheckCount, (int32_t)failCheckCount);
 	printf("Run completed in " ALF_TEST_CC_TIME "%f" ALF_TEST_CC_RESET " ms\n", 
 		totalTime / 1000000.0);
 
@@ -662,9 +670,12 @@ void alfCheckMemEq(
 		m0,
 		m0
 	);
+	INT_TYPE predicate =
+		(m0 == NULL && m1 == NULL) ||
+		(m0 && m1 && memcmp(m0, m1, size) == 0);
 	alfTestCheckInternal(
 		state,
-		memcmp(m0, m1, size) == 0,
+		predicate,
 		message,
 		file,
 		line,
@@ -690,9 +701,12 @@ void alfCheckStrEq(
 		str0,
 		str1
 	);
+	INT_TYPE predicate =
+		(str0 == NULL && str1 == NULL) ||
+		(str0 && str1 && strcmp(str0, str1) == 0);
 	alfTestCheckInternal(
 		state, 
-		strcmp(str0, str1) == 0, 
+		predicate,
 		message, 
 		file, 
 		line, 

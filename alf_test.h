@@ -194,17 +194,24 @@ extern "C" {
  * For more information visit the github repository: TODO(Filip Björklund)
  */
 
+// ====================================================================== //
+// Forward Declarations
+// ====================================================================== //
+	
+typedef struct tag_AlfTestSuite AlfTestSuite;
+typedef struct tag_AlfTestState AlfTestState;
+	
 // ========================================================================== //
 // Type definitions
 // ========================================================================== //
 
 /** Test function **/
-typedef void(*PFN_Test)(struct tag_AlfTestState* state);
+typedef void(*PFN_Test)(AlfTestState* state);
 
 // -------------------------------------------------------------------------- //
 
 /** Suite setup function **/
-typedef void(*PFN_SuiteSetup)(struct tag_AlfTestSuite* suite);
+typedef void(*PFN_SuiteSetup)(AlfTestSuite* suite);
 
 // -------------------------------------------------------------------------- //
 
@@ -536,4 +543,4 @@ char* alfLastIndexOf(char* string, char character);
 }
 #endif
 
-#endif ALF_TEST_H
+#endif // ALF_TEST_H

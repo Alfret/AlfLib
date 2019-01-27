@@ -75,21 +75,21 @@ uint32_t numbers0through79[] = {
 void test_alfUTF8Insert(AlfTestState* state)
 {
 	// Setup input strings
-	const char* input0 = u8"måndag";
+	const char* input0 = "mŒndag";
 
 	// Insert
-	char* output0 = alfUTF8Insert(input0, 3, 0, u8"ads");
-	ALF_CHECK_STREQ_R(state, output0, u8"månadsdag",
+	char* output0 = alfUTF8Insert(input0, 3, 0, "ads");
+	ALF_CHECK_STREQ_R(state, output0, "mŒnadsdag",
 		"Add letters in word, no delete");
 
 	// Delete
-	char* output1 = alfUTF8Insert(input0, 3, 3, u8"");
-	ALF_CHECK_STREQ_R(state, output1, u8"mån",
+	char* output1 = alfUTF8Insert(input0, 3, 3, "");
+	ALF_CHECK_STREQ_R(state, output1, "mŒn",
 		"Only delete letters, no adding");
 
 	// Replace
-	char* output2 = alfUTF8Insert(input0, 0, 3, u8"annan");
-	ALF_CHECK_STREQ_R(state, output2, u8"annandag",
+	char* output2 = alfUTF8Insert(input0, 0, 3, "annan");
+	ALF_CHECK_STREQ_R(state, output2, "annandag",
 		"Replace letters, delete some and add some");
 }
 
@@ -98,37 +98,37 @@ void test_alfUTF8Insert(AlfTestState* state)
 void test_alfUTF8Substring(AlfTestState* state)
 {
 	// Setup input strings
-	const char* input0 = u8"måndag";
+	const char* input0 = "måndag";
 
 	// Check strings that starts at beginning
 	char* output0 = alfUTF8Substring(input0, 0, 0); // Empty word
-	ALF_CHECK_STREQ_R(state, output0, u8"",
+	ALF_CHECK_STREQ_R(state, output0, "",
 		"Empty substring at beginning of string");
 	char* output1 = alfUTF8Substring(input0, 0, 1); // First letter
-	ALF_CHECK_STREQ_R(state, output1, u8"m",
+	ALF_CHECK_STREQ_R(state, output1, "m",
 		"First letter at beginning of string");
 	char* output2 = alfUTF8Substring(input0, 0, 2); // First 2 letters
-	ALF_CHECK_STREQ_R(state, output2, u8"må",
+	ALF_CHECK_STREQ_R(state, output2, "mŒ",
 		"First two letters at beginning of string");
 	char* output3 = alfUTF8Substring(input0, 0, 5); // All except 1 letter
-	ALF_CHECK_STREQ_R(state, output3, u8"månda",
+	ALF_CHECK_STREQ_R(state, output3, "mŒnda",
 		"Entire string expect last letter");
 	char* output4 = alfUTF8Substring(input0, 0, 6); // All
-	ALF_CHECK_STREQ_R(state, output4, u8"måndag",
+	ALF_CHECK_STREQ_R(state, output4, "mŒndag",
 		"Entire string");
 
 	// Check strings that ends at the end
 	char* output5 = alfUTF8Substring(input0, 5, 0); // Empty word
-	ALF_CHECK_STREQ_R(state, output5, u8"",
+	ALF_CHECK_STREQ_R(state, output5, "",
 		"Empty substring at beginning of string");
 	char* output6 = alfUTF8Substring(input0, 5, 1); // First letter
-	ALF_CHECK_STREQ_R(state, output6, u8"g",
+	ALF_CHECK_STREQ_R(state, output6, "g",
 		"First letter at beginning of string");
 	char* output7 = alfUTF8Substring(input0, 4, 2); // First 2 letters
-	ALF_CHECK_STREQ_R(state, output7, u8"ag",
+	ALF_CHECK_STREQ_R(state, output7, "ag",
 		"First two letters at beginning of string");
 	char* output8 = alfUTF8Substring(input0, 1, 5); // All except 1 letter
-	ALF_CHECK_STREQ_R(state, output8, u8"åndag",
+	ALF_CHECK_STREQ_R(state, output8, "Œndag",
 		"Entire string expect last letter");
 
 	// Invalid index
@@ -159,8 +159,10 @@ void test_alfCreateThread(AlfTestState* state)
 {
 	// Make sure code is passed through
 	const int32_t code = 56;
-	AlfThread* thread = 
-		alfCreateThread(threadStartFunction0, (void*)(int64_t)(code));
+	AlfThread* thread = alfCreateThread(
+		(PFN_AlfThreadFunction)threadStartFunction0,
+		(void*)(int64_t)(code)
+	);
 	int32_t exitCode = alfJoinThread(thread);
 	ALF_CHECK_TRUE_R(state, exitCode == code,
 		"Exit code from thread should match input");
@@ -168,7 +170,7 @@ void test_alfCreateThread(AlfTestState* state)
 	// Create named
 	const char* name = "test_thread";
 	thread = alfCreateThreadNamed(
-		threadStartFunction1, 
+		(PFN_AlfThreadFunction)threadStartFunction1,
 		(void*)(int64_t)(code), 
 		name
 	);
@@ -227,8 +229,7 @@ void test_alfHashTableGet(AlfTestState* state)
 	AlfHashTable* table = alfCreateHashTableSimple(sizeof(uint32_t), NULL);
 	for (uint32_t i = 0; i < fruitNamesCount; i++)
 	{
-		const AlfBool success =
-			alfHashTableInsert(table, fruitNames[i], &numbers0through79[i]);
+		alfHashTableInsert(table, fruitNames[i], &numbers0through79[i]);
 	}
 
 	// Check that value are in list
@@ -253,8 +254,7 @@ void test_alfHashTableRemove(AlfTestState* state)
 	AlfHashTable* table = alfCreateHashTableSimple(sizeof(uint32_t), NULL);
 	for (uint32_t i = 0; i < fruitNamesCount; i++)
 	{
-		const AlfBool success =
-			alfHashTableInsert(table, fruitNames[i], &numbers0through79[i]);
+		alfHashTableInsert(table, fruitNames[i], &numbers0through79[i]);
 	}
 
 	// Remove values on even indices
@@ -331,7 +331,7 @@ int main()
 		suiteThread,
 		suiteCollection
 	};
-	const AlfBool failures = alfRunSuites(suites, 3);
+	const int failures = (int)alfRunSuites(suites, 3);
 	alfDestroyTestSuite(suiteCollection);
 	alfDestroyTestSuite(suiteThread);
 	alfDestroyTestSuite(suiteUnicode);

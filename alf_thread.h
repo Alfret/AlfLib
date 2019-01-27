@@ -608,7 +608,7 @@ void alfNotifyAllConditionVariables(AlfConditionVariable* conditionVariable);
  * \brief Create read-write lock.
  * \return Created lock or NULL on failure.
  */
-AlfReadWriteLock* alfCreateReadWriteLock();
+AlfReadWriteLock* alfCreateReadWriteLock(void);
 
 // -------------------------------------------------------------------------- //
 
@@ -668,7 +668,7 @@ void alfReleaseWriteLock(AlfReadWriteLock* lock);
  * \brief Acquire TLS handle.
  * \return TLS handle or NULL on failure.
  */
-AlfTLSHandle* alfGetTLS();
+AlfTLSHandle* alfGetTLS(void);
 
 // -------------------------------------------------------------------------- //
 
@@ -917,7 +917,7 @@ uint32_t alfAtomicSubU32(uint32_t* integer, uint32_t value);
  * \brief Returns hardware thread count.
  * \return Hardware thread count.
  */
-uint32_t alfGetHardwareThreadCount();
+uint32_t alfGetHardwareThreadCount(void);
 
 // -------------------------------------------------------------------------- //
 
