@@ -122,6 +122,18 @@ uint32_t alfUTF8CodepointWidth(uint32_t codepoint);
 
 // -------------------------------------------------------------------------- //
 
+/** Returns the offset in number of bytes from the specified offset in the 
+ * string to the following codepoint.
+ * \brief Returns offset to next codepoint.
+ * \param string String to get offset to next codepoint in.
+ * \param offset Offset at which to return offset to next codepoint at.
+ * \return Offset to next codepoint from the specified offset in the input 
+ * string.
+ */
+int32_t alfUTF8OffsetToNextCodepoint(const char* string, uint32_t offset);
+
+// -------------------------------------------------------------------------- //
+
 /** Returns the length of an UTF-8 encoded string in number of codepoints.
  * \brief Returns UTF-8 string length.
  * \param string String to get length of.

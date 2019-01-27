@@ -201,6 +201,18 @@ uint32_t alfUTF8CodepointWidth(uint32_t codepoint)
 
 // -------------------------------------------------------------------------- //
 
+int32_t alfUTF8OffsetToNextCodepoint(const char* string, uint32_t offset)
+{
+	const char firstByte = string[offset];
+	if ((firstByte & 0x80) == 0) { return 1; }
+	if ((firstByte & 0xE0) == 0xC0) { return 2; }
+	if ((firstByte & 0xF0) == 0xE0) { return 3; }
+	if ((firstByte & 0xF0) == 0xE0) { return 4; }
+	return -1;
+}
+
+// -------------------------------------------------------------------------- //
+
 uint64_t alfUTF8StringLength(const char* string)
 {
 	if (!string) { return 0; }
