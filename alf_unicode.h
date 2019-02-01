@@ -55,23 +55,28 @@ typedef uint32_t AlfBool;
 #	define ALF_FALSE ((AlfBool)0)
 #endif
 
-// -------------------------------------------------------------------------- //
+// ========================================================================== //
+// Callback Function Types
+// ========================================================================== //
 
-/** Prototype for a function that can be used as a callback during UTF-8 string
- * iteration.
+/** Prototype for a function that can be used as a callback during unicode 
+ * string iteration.
  * \param codepoint Codepoint at current iteration index.
  * \param byte offset of codepoint.
  * \param index Codepoint index in string.
  * \param Return true to continue iteration, return false to stop.
  */
-typedef AlfBool(*PFN_AlfUTF8Iterate)(
+typedef AlfBool(*PFN_AlfUnicodeIterateCodepoint)(
 	uint32_t codepoint,
 	uint64_t byteOffset,
-	uint64_t index
-	);
+	uint64_t index);
+
+// -------------------------------------------------------------------------- //
+
+typedef AlfBool(*PFN_AlfUnicodeCodepointPredicate)(uint32_t codepoint);
 
 // ========================================================================== //
-// Functions
+// UTF-8 Functions
 // ========================================================================== //
 
 /** Decode a codepoint from an UTF-8 string at the specified offset. The 
@@ -84,7 +89,7 @@ typedef AlfBool(*PFN_AlfUTF8Iterate)(
  * \param offset Offset to decode at in string.
  * \param codepoint Codepoint.
  * \param numBytes Number of bytes that codepoint is encoded in.
- * \return True if a valid UTF-8 codepoint could be decoded else false.
+ * \return True if a valid unicode codepoint could be decoded else false.
  */
 AlfBool alfUTF8Decode(
 	const char* string,
@@ -131,6 +136,31 @@ uint32_t alfUTF8CodepointWidth(uint32_t codepoint);
  * string.
  */
 int32_t alfUTF8OffsetToNextCodepoint(const char* string, uint32_t offset);
+
+// -------------------------------------------------------------------------- //
+
+/** Returns information about the location of the next word from the specified 
+ * offset in a UTF-8 encoded string. The start offset might differ from the 
+ * offset specified to start looking for the word at, if there is whitespace 
+ * before the start of the word. The number of bytes are set to the distance 
+ * between the start offset and the offset of the end of the string.
+ * If no word is found and a nul-terminator was instead reached then the 
+ * function returns false.
+ * \brief Returns information about next word in UTF-8 encoded strings.
+ * \param[in] string String to get next word in.
+ * \param[in] offset Offset to start looking for word at.
+ * \param[out] startOffset Set to the offset of the start of the word.
+ * \param[out] numBytes Set to the number of bytes that the word occupies.
+ * \param[in] isWhitespace Function that is called by the implementation to 
+ * determine if a codepoint is considered whitespace.
+ * \return True if a word was found otherwise false.
+ */
+AlfBool alfUTF8NextWord(
+	const char* string,
+	uint32_t offset,
+	uint32_t* startOffset,
+	uint32_t* numBytes,
+	PFN_AlfUnicodeCodepointPredicate isWhitespace);
 
 // -------------------------------------------------------------------------- //
 
@@ -304,7 +334,70 @@ AlfBool alfUTF8Valid(const char* string);
  * iterateFunc callback returned false or if an error occured such as the string
  * is not valid UTF-8.
  */
-AlfBool alfUTF8Iterate(const char* string, PFN_AlfUTF8Iterate iterateFunc);
+AlfBool alfUTF8Iterate(
+	const char* string, 
+	PFN_AlfUnicodeIterateCodepoint iterateFunc);
+
+// ========================================================================== //
+// UTF-16 Functions
+// ========================================================================== //
+
+/** Decode a codepoint from an UTF-16 string at the specified offset. The
+ * codepoint and number of code units that it's encoded in is returned in 
+ * parameter 3 and 4.
+ * \note If the function fails to decode a codepoint then the codepoint and
+ * number of code units are not written to their respective parameters
+ * \note One code unit is 2 bytes for UTF-16.
+ * \brief Decode UTF-8 codepoint
+ * \param string String to decode codepoint in.
+ * \param offset Offset to decode at in string.
+ * \param codepoint Codepoint.
+ * \param numCodeUnits Number of code units that codepoint is encoded in. This 
+ * is either 1 or 2.
+ * \return True if a valid unicode codepoint could be decoded else false.
+ */
+AlfBool alfUTF16Decode(
+	const uint16_t* string,
+	uint64_t offset,
+	uint32_t* codepoint,
+	uint32_t* numCodeUnits);
+
+// -------------------------------------------------------------------------- //
+
+/** Encode a codepoint in UTF-16 at a specified offset in a string. The string 
+ * is expected to be large enough to hold the code units for the encoded 
+ * codepoint.
+ * \note One code unit is 2 bytes for UTF-16.
+ * \brief Encode codepoint in UTF-8.
+ * \param string String to encode codepoint into.
+ * \param offset Offset to encode codepoint at.
+ * \param codepoint Codepoint to encode into string.
+ * \param numCodeUnits Number of code units that codepoint was encoded in. This
+ * is either 1 or 2.
+ * \return Returns true if the encoding is successfull, else false.
+ */
+AlfBool alfUTF16Encode(
+	uint16_t* string,
+	uint64_t offset,
+	uint32_t codepoint,
+	uint32_t* numCodeUnits);
+
+// -------------------------------------------------------------------------- //
+
+/** Returns the width of a codepoint in number of code units when encoded as 
+ * UTF-16.
+ * \brief Returns UTF-16 codepoint code-unit-width.
+ * \param codepoint Codepoint to get width of.
+ * \return number of bytes that codepoint is encoded in. 0 is returned if the
+ * codepoint is not a valid unicode codepoint.
+ */
+uint32_t alfUTF16CodepointWidth(uint32_t codepoint);
+
+// ========================================================================== //
+// Conversion Functions
+// ========================================================================== //
+
+char* alfUTF16ToUTF8(const char* string);
 
 // ========================================================================== //
 // End of Header
