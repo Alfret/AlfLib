@@ -209,7 +209,7 @@ typedef struct tag_AlfTestSuite
 
 /** Setup console for platforms that does not support escape sequences out of
  * the box **/
-static void _alfSetupConsoleMode()
+static void _alfSetupConsole()
 {
 #if defined(_WIN32)
 	static INT_TYPE isSetup = 0;
@@ -226,6 +226,11 @@ static void _alfSetupConsoleMode()
 				mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 			assert(success && "Failed to set Windows console mode");
 		}
+
+		// Set console encoding
+		SetConsoleOutputCP(CP_UTF8);
+		SetConsoleCP(CP_UTF8);
+
 		isSetup = 1;
 	}
 #endif
@@ -372,7 +377,7 @@ static char* alfTestFormatString(const char* format, ...)
 AlfTestSuite* alfCreateTestSuite(char* name, AlfTest* tests, INT_TYPE count)
 {
 	// Do required setup
-	_alfSetupConsoleMode();
+	_alfSetupConsole();
 
 	// Allocate suite
 	AlfTestSuite* suite = malloc(sizeof(AlfTestSuite));

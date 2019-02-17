@@ -35,7 +35,7 @@
 // ========================================================================== //
 
 /** Returns string size in bytes. Does not care about encoding **/
-uint32_t alfStringSize(const char* string)
+uint32_t alfStringSize(const AlfChar8* string)
 {
 	uint32_t size = 0;
 	while (string[size++] != 0) {}
@@ -66,7 +66,7 @@ uint32_t alfStringSize(const char* string)
  * is expected to be valid. Validity is not checked by this function **/
 uint32_t alfUTF8CodepointWidthFromFirstByte(uint8_t c)
 {
-	return c < 0x80 ? 1 : c < 0xC0 ? 2 : c < 0xE0 ? 3 : 4;
+	return c <= 0x7F ? 1 : c <= 0x7FF ? 2 : c <= 0xFFFF ? 3 : 4;
 }
 
 // ========================================================================== //
@@ -74,7 +74,7 @@ uint32_t alfUTF8CodepointWidthFromFirstByte(uint8_t c)
 // ========================================================================== //
 
 AlfBool alfUTF8Decode(
-	const char* string, 
+	const AlfChar8* string, 
 	uint64_t offset, 
 	uint32_t* codepoint, 
 	uint32_t* numBytes)
@@ -117,7 +117,7 @@ AlfBool alfUTF8Decode(
 	}
 
 	// Check if 3-cont bytes
-	if ((firstByte & 0xF0) == 0xE0)
+	if ((firstByte & 0xF8) == 0xF0)
 	{
 		const uint32_t firstCont = 
 			(uint32_t)string[offset + 1] & ALF_UTF8_CONT_MASK;
@@ -140,7 +140,7 @@ AlfBool alfUTF8Decode(
 // -------------------------------------------------------------------------- //
 
 AlfBool alfUTF8Encode(
-	char* string, 
+	AlfChar8* string, 
 	uint64_t offset, 
 	uint32_t codepoint,
 	uint32_t* numBytes)
@@ -151,39 +151,40 @@ AlfBool alfUTF8Encode(
 	// Encode in 1 byte
 	if (_numBytes == 1)
 	{
-		string[offset] = (char)codepoint;
+		string[offset] = (AlfChar8)codepoint;
 		return ALF_TRUE;
 	}
 	// Encode in 2 byte
 	if (_numBytes == 2)
 	{
 		string[offset] = 
-			(char)(((codepoint >> 6) & ALF_UTF8_MASK_2BYTE_FIRST) | 0xC0);
+			(AlfChar8)(((codepoint >> 6) & ALF_UTF8_MASK_2BYTE_FIRST) | 0xC0);
 		string[offset + 1] =
-			(char)(((codepoint >> 0) & ALF_UTF8_CONT_MASK) | 0x80);
+			(AlfChar8)(((codepoint >> 0) & ALF_UTF8_CONT_MASK) | 0x80);
+		return ALF_TRUE;
 	}
 	// Encode in 3 byte
 	if (_numBytes == 3)
 	{
 		string[offset] =
-			(char)(((codepoint >> 12) & ALF_UTF8_MASK_3BYTE_FIRST) | 0xE0);
+			(AlfChar8)(((codepoint >> 12) & ALF_UTF8_MASK_3BYTE_FIRST) | 0xE0);
 		string[offset + 1] =
-			(char)(((codepoint >>  6) & ALF_UTF8_CONT_MASK) | 0x80);
+			(AlfChar8)(((codepoint >>  6) & ALF_UTF8_CONT_MASK) | 0x80);
 		string[offset + 2] =
-			(char)(((codepoint >>  0) & ALF_UTF8_CONT_MASK) | 0x80);
+			(AlfChar8)(((codepoint >>  0) & ALF_UTF8_CONT_MASK) | 0x80);
 		return ALF_TRUE;
 	}
 	// Encode in 4 byte
 	if (_numBytes == 4)
 	{
 		string[offset] =
-			(char)(((codepoint >> 18) & ALF_UTF8_MASK_4BYTE_FIRST) | 0xF0);
+			(AlfChar8)(((codepoint >> 18) & ALF_UTF8_MASK_4BYTE_FIRST) | 0xF0);
 		string[offset + 1] =
-			(char)(((codepoint >> 12) & ALF_UTF8_CONT_MASK) | 0x80);
+			(AlfChar8)(((codepoint >> 12) & ALF_UTF8_CONT_MASK) | 0x80);
 		string[offset + 2] =
-			(char)(((codepoint >>  6) & ALF_UTF8_CONT_MASK) | 0x80);
+			(AlfChar8)(((codepoint >>  6) & ALF_UTF8_CONT_MASK) | 0x80);
 		string[offset + 3] =
-			(char)(((codepoint >>  0) & ALF_UTF8_CONT_MASK) | 0x80);
+			(AlfChar8)(((codepoint >>  0) & ALF_UTF8_CONT_MASK) | 0x80);
 		return ALF_TRUE;
 	}
 
@@ -203,9 +204,9 @@ uint32_t alfUTF8CodepointWidth(uint32_t codepoint)
 
 // -------------------------------------------------------------------------- //
 
-int32_t alfUTF8OffsetToNextCodepoint(const char* string, uint32_t offset)
+int32_t alfUTF8OffsetToNextCodepoint(const AlfChar8* string, uint32_t offset)
 {
-	const char firstByte = string[offset];
+	const AlfChar8 firstByte = string[offset];
 	if ((firstByte & 0x80) == 0) { return 1; }
 	if ((firstByte & 0xE0) == 0xC0) { return 2; }
 	if ((firstByte & 0xF0) == 0xE0) { return 3; }
@@ -216,7 +217,7 @@ int32_t alfUTF8OffsetToNextCodepoint(const char* string, uint32_t offset)
 // -------------------------------------------------------------------------- //
 
 AlfBool alfUTF8NextWord(
-	const char* string,
+	const AlfChar8* string,
 	uint32_t offset,
 	uint32_t* startOffset,
 	uint32_t* numBytes,
@@ -251,12 +252,12 @@ AlfBool alfUTF8NextWord(
 
 // -------------------------------------------------------------------------- //
 
-uint64_t alfUTF8StringLength(const char* string)
+uint64_t alfUTF8StringLength(const AlfChar8* string)
 {
 	if (!string) { return 0; }
 
 	uint64_t length = 0, offset = 0;
-	char c;
+	AlfChar8 c;
 	while ((c = string[offset]))
 	{
 		offset += alfUTF8CodepointWidthFromFirstByte(c);
@@ -267,7 +268,7 @@ uint64_t alfUTF8StringLength(const char* string)
 
 // -------------------------------------------------------------------------- //
 
-int64_t alfUTF8IndexOf(const char* string, uint32_t codepoint)
+int64_t alfUTF8IndexOf(const AlfChar8* string, uint32_t codepoint)
 {
 	if (!string) { return -1; }
 
@@ -290,7 +291,7 @@ int64_t alfUTF8IndexOf(const char* string, uint32_t codepoint)
 
 // -------------------------------------------------------------------------- //
 
-int64_t alfUTF8LastIndexOf(const char* string, uint32_t codepoint)
+int64_t alfUTF8LastIndexOf(const AlfChar8* string, uint32_t codepoint)
 {
 	if (!string) { return -1; }
 
@@ -314,7 +315,7 @@ int64_t alfUTF8LastIndexOf(const char* string, uint32_t codepoint)
 
 // -------------------------------------------------------------------------- //
 
-AlfBool alfUTF8StartsWith(const char* string, uint32_t codepoint)
+AlfBool alfUTF8StartsWith(const AlfChar8* string, uint32_t codepoint)
 {
 	if (!string) { return ALF_FALSE; }
 
@@ -326,7 +327,7 @@ AlfBool alfUTF8StartsWith(const char* string, uint32_t codepoint)
 
 // -------------------------------------------------------------------------- //
 
-AlfBool alfUTF8EndsWith(const char* string, uint32_t codepoint)
+AlfBool alfUTF8EndsWith(const AlfChar8* string, uint32_t codepoint)
 {
 	uint32_t _codepoint = 0;
 	uint32_t bytecount;
@@ -346,10 +347,10 @@ AlfBool alfUTF8EndsWith(const char* string, uint32_t codepoint)
 
 // -------------------------------------------------------------------------- //
 
-char* alfUTF8Substring(const char* string, uint64_t from, uint64_t count)
+AlfChar8* alfUTF8Substring(const AlfChar8* string, uint64_t from, uint64_t count)
 {
 	if (!string) { return NULL; }
-	if (count == 0) { return (char*)calloc(1, 1); }
+	if (count == 0) { return (AlfChar8*)calloc(1, 1); }
 
 	uint32_t _codepoint;
 	uint32_t bytecount;
@@ -372,7 +373,7 @@ char* alfUTF8Substring(const char* string, uint64_t from, uint64_t count)
 	if (endOffset == 0) { return NULL; }
 
 	const uint64_t size = endOffset - startOffset;
-	char* buffer = (char*)malloc((size + 1) * sizeof(char));
+	AlfChar8* buffer = (AlfChar8*)malloc((size + 1) * sizeof(AlfChar8));
 	if (!buffer) { return NULL; }
 	buffer[size] = 0;
 	memcpy(buffer, string + startOffset, size);
@@ -381,7 +382,7 @@ char* alfUTF8Substring(const char* string, uint64_t from, uint64_t count)
 
 // -------------------------------------------------------------------------- //
 
-char* alfUTF8SubstringFrom(const char* string, uint64_t from)
+AlfChar8* alfUTF8SubstringFrom(const AlfChar8* string, uint64_t from)
 {
 	if (!string) { return NULL; }
 
@@ -403,7 +404,7 @@ char* alfUTF8SubstringFrom(const char* string, uint64_t from)
 	}
 
 	const uint64_t size = offset - startOffset;
-	char* buffer = (char*)malloc((size + 1) * sizeof(char));
+	AlfChar8* buffer = (AlfChar8*)malloc((size + 1) * sizeof(AlfChar8));
 	if (!buffer) { return NULL; }
 	buffer[size] = 0;
 	memcpy(buffer, string + startOffset, size);
@@ -412,11 +413,11 @@ char* alfUTF8SubstringFrom(const char* string, uint64_t from)
 
 // -------------------------------------------------------------------------- //
 
-char* alfUTF8Insert(
-	const char* string, 
+AlfChar8* alfUTF8Insert(
+	const AlfChar8* string, 
 	uint64_t from, 
 	uint64_t count, 
-	const char* insertion)
+	const AlfChar8* insertion)
 {
 	if (!string) { return NULL; }
 
@@ -444,7 +445,7 @@ char* alfUTF8Insert(
 	const uint64_t beforeSize = startOffset;
 	const uint64_t afterSize = offset - endOffset;
 	const uint64_t totalSize = insertSize + beforeSize + afterSize;
-	char* buffer = (char*)malloc((totalSize + 1) * sizeof(char));
+	AlfChar8* buffer = (AlfChar8*)malloc((totalSize + 1) * sizeof(AlfChar8));
 	if (!buffer) { return NULL; }
 	buffer[totalSize] = 0;
 	memcpy(buffer, string, beforeSize);
@@ -455,7 +456,7 @@ char* alfUTF8Insert(
 
 // -------------------------------------------------------------------------- //
 
-uint32_t alfUTF8AtIndex(const char* string, uint64_t index)
+uint32_t alfUTF8AtIndex(const AlfChar8* string, uint64_t index)
 {
 	uint32_t codepoint;
 	uint32_t bytecount;
@@ -475,7 +476,7 @@ uint32_t alfUTF8AtIndex(const char* string, uint64_t index)
 
 // -------------------------------------------------------------------------- //
 
-uint64_t alfUTF8OffsetOfIndex(const char* string, uint64_t index)
+uint64_t alfUTF8OffsetOfIndex(const AlfChar8* string, uint64_t index)
 {
 	uint32_t codepoint;
 	uint32_t bytecount;
@@ -494,7 +495,7 @@ uint64_t alfUTF8OffsetOfIndex(const char* string, uint64_t index)
 // -------------------------------------------------------------------------- //
 
 AlfBool alfUTF8OffsetOfIndices(
-	const char* string, 
+	const AlfChar8* string, 
 	uint64_t* indices, 
 	uint32_t indexCount, 
 	uint32_t* indicesSet)
@@ -525,7 +526,7 @@ AlfBool alfUTF8OffsetOfIndices(
 
 // -------------------------------------------------------------------------- //
 
-AlfBool alfUTF8Valid(const char* string)
+AlfBool alfUTF8Valid(const AlfChar8* string)
 {
 	uint32_t codepoint;
 	uint32_t bytecount;
@@ -545,7 +546,7 @@ AlfBool alfUTF8Valid(const char* string)
 // -------------------------------------------------------------------------- //
 
 AlfBool alfUTF8Iterate(
-	const char* string, 
+	const AlfChar8* string, 
 	PFN_AlfUnicodeIterateCodepoint iterateFunc)
 {
 	uint32_t codepoint;
@@ -585,7 +586,7 @@ AlfBool alfUTF8Iterate(
 // ========================================================================== //
 
 AlfBool alfUTF16Decode(
-	const uint16_t* string, 
+	const AlfChar16* string,
 	uint64_t offset, 
 	uint32_t* codepoint, 
 	uint32_t* numCodeUnits)
@@ -615,11 +616,28 @@ AlfBool alfUTF16Decode(
 // -------------------------------------------------------------------------- //
 
 AlfBool alfUTF16Encode(
-	uint16_t* string, 
+	AlfChar16* string,
 	uint64_t offset, 
 	uint32_t codepoint, 
 	uint32_t* numCodeUnits)
 {
+	const uint32_t codeUnits = alfUTF16CodepointWidth(codepoint);
+	*numCodeUnits = codeUnits;
+
+	// Encode 
+	if (codeUnits == 1)
+	{
+		string[offset] = (uint16_t)codepoint;
+		return ALF_TRUE;
+	}
+	// Encode surrogate pair
+	if (codeUnits == 2)
+	{
+		codepoint -= 0x10000;
+		string[offset] = (codepoint >> 10) + 0xD800;
+		string[offset + 1] = (codepoint & 0x3FF) + 0xDC00;
+		return ALF_TRUE;
+	}
 	return ALF_FALSE;
 }
 
@@ -630,3 +648,73 @@ uint32_t alfUTF16CodepointWidth(uint32_t codepoint)
 	return codepoint < 0x010000 ? 1 : 2;
 }
 
+
+// ========================================================================== //
+// Conversion Functions
+// ========================================================================== //
+
+AlfBool alfUTF16ToUTF8(
+	const AlfChar16* string, 
+	uint32_t* numBytes, 
+	AlfChar8* buffer)
+{
+	// Decode UTF-16
+	uint32_t _numBytes = 0;
+	uint32_t offset = 0, encodeOffset = 0;
+	uint32_t codepoint, numCodeUnits;
+	while (alfUTF16Decode(string, offset, &codepoint, &numCodeUnits))
+	{
+		if (codepoint == 0) { break; }
+		_numBytes += alfUTF8CodepointWidth(codepoint);
+		offset += numCodeUnits;
+
+		// Encode UTF-8 if buffer is valid
+		if (buffer)
+		{
+			uint32_t numEncodeBytes;
+			const AlfBool encodeResult = 
+				alfUTF8Encode(buffer, encodeOffset, codepoint, &numEncodeBytes);
+			if (!encodeResult)
+			{
+				return ALF_FALSE;
+			}
+			encodeOffset += numEncodeBytes;
+		}
+	}
+	*numBytes = _numBytes;
+	return ALF_TRUE;
+}
+
+// -------------------------------------------------------------------------- //
+
+AlfBool alfUTF8ToUTF16(
+	const AlfChar8* string, 
+	uint32_t* numCodeUnits, 
+	AlfChar16* buffer)
+{
+	// Decode UTF-8
+	uint32_t _numCodeUnits = 0;
+	uint32_t offset = 0, encodeOffset = 0;
+	uint32_t codepoint, numBytes;
+	while (alfUTF8Decode(string, offset, &codepoint, &numBytes))
+	{
+		if (codepoint == 0) { break; }
+		_numCodeUnits += alfUTF16CodepointWidth(codepoint);
+		offset += numBytes;
+
+		// Encode UTF-8 if buffer is valid
+		if (buffer)
+		{
+			uint32_t numEncodeCodeUnits;
+			const AlfBool encodeResult = alfUTF16Encode(
+				buffer, encodeOffset, codepoint, &numEncodeCodeUnits);
+			if (!encodeResult)
+			{
+				return ALF_FALSE;
+			}
+			encodeOffset += numEncodeCodeUnits;
+		}
+	}
+	*numCodeUnits = _numCodeUnits;
+	return ALF_TRUE;
+}

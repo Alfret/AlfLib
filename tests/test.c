@@ -1,6 +1,6 @@
-// MIT License
+ï»¿// MIT License
 //
-// Copyright (c) 2018-2019 Filip Björklund
+// Copyright (c) 2018-2019 Filip BjÃ¶rklund
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -75,16 +75,16 @@ uint32_t numbers0through79[] = {
 void test_alfUTF8Insert(AlfTestState* state)
 {
 	// Setup input strings
-	const char* input0 = "mŒndag";
+	const char* input0 = "mÅ’ndag";
 
 	// Insert
 	char* output0 = alfUTF8Insert(input0, 3, 0, "ads");
-	ALF_CHECK_STREQ_R(state, output0, "mŒnadsdag",
+	ALF_CHECK_STREQ_R(state, output0, "mÅ’nadsdag",
 		"Add letters in word, no delete");
 
 	// Delete
 	char* output1 = alfUTF8Insert(input0, 3, 3, "");
-	ALF_CHECK_STREQ_R(state, output1, "mŒn",
+	ALF_CHECK_STREQ_R(state, output1, "mÅ’n",
 		"Only delete letters, no adding");
 
 	// Replace
@@ -98,7 +98,7 @@ void test_alfUTF8Insert(AlfTestState* state)
 void test_alfUTF8Substring(AlfTestState* state)
 {
 	// Setup input strings
-	const char* input0 = "måndag";
+	const char* input0 = "mÃ¥ndag";
 
 	// Check strings that starts at beginning
 	char* output0 = alfUTF8Substring(input0, 0, 0); // Empty word
@@ -108,13 +108,13 @@ void test_alfUTF8Substring(AlfTestState* state)
 	ALF_CHECK_STREQ_R(state, output1, "m",
 		"First letter at beginning of string");
 	char* output2 = alfUTF8Substring(input0, 0, 2); // First 2 letters
-	ALF_CHECK_STREQ_R(state, output2, "mŒ",
+	ALF_CHECK_STREQ_R(state, output2, "mÅ’",
 		"First two letters at beginning of string");
 	char* output3 = alfUTF8Substring(input0, 0, 5); // All except 1 letter
-	ALF_CHECK_STREQ_R(state, output3, "mŒnda",
+	ALF_CHECK_STREQ_R(state, output3, "mÅ’nda",
 		"Entire string expect last letter");
 	char* output4 = alfUTF8Substring(input0, 0, 6); // All
-	ALF_CHECK_STREQ_R(state, output4, "mŒndag",
+	ALF_CHECK_STREQ_R(state, output4, "mÅ’ndag",
 		"Entire string");
 
 	// Check strings that ends at the end
@@ -128,7 +128,7 @@ void test_alfUTF8Substring(AlfTestState* state)
 	ALF_CHECK_STREQ_R(state, output7, "ag",
 		"First two letters at beginning of string");
 	char* output8 = alfUTF8Substring(input0, 1, 5); // All except 1 letter
-	ALF_CHECK_STREQ_R(state, output8, "Œndag",
+	ALF_CHECK_STREQ_R(state, output8, "Å’ndag",
 		"Entire string expect last letter");
 
 	// Invalid index
@@ -295,8 +295,49 @@ void test_alfHashTableRemove(AlfTestState* state)
 // Main Function
 // ========================================================================== //
 
+
+int CompareInt(const void* i0, const void* i1)
+{
+	const uint32_t _i0 = *(uint32_t*)i0;
+	const uint32_t _i1 = *(uint32_t*)i1;
+	return (_i0 > _i1) ? 1 : (_i0 == _i1) ? 0 : -1;
+}
+
 int main()
 {
+
+	// Setup list
+	const uint32_t count = 9;
+	uint32_t ints[] = { 1, 6, 3, 4, 2, 9, 6, 5, 7 };
+	AlfArrayList* list = 
+		alfCreateArrayListForObjectSize(sizeof(uint32_t), NULL);
+	for (uint32_t i = 0; i < count; i++)
+	{
+		alfArrayListAdd(list, &ints[i]);
+	}
+
+	// Sort list
+	alfArrayListSort(list, CompareInt);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	// Startup
 	alfThreadStartup();
 

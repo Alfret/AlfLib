@@ -110,7 +110,23 @@ typedef void(*PFN_AlfCollectionCleaner)(const void* object);
  * \param object1 Second object in comparison.
  * \return True if the objects are equal otherwise false.
  */
-typedef AlfBool(*PFN_AlfCollectionEqual)(const void* object0, const void* object1);
+typedef AlfBool(*PFN_AlfCollectionEqual)(
+	const void* object0, 
+	const void* object1);
+
+// -------------------------------------------------------------------------- //
+
+/** Prototype of a function to compare two objects in a collection. The value 
+ * that is returned signifies the relative value of one object to the other. A
+ * value of 1 means that the first object is greater than the second, -1 means
+ * the opposite and 0 means that both values are equal.
+ * \param object0 First object in comparison.
+ * \param object1 Second object in comparison.
+ * \return 1, -1 or 0 depending on the comparison result.
+ */
+typedef int32_t(*PFN_AlfCollectionCompare)(
+	const void* object0, 
+	const void* object1);
 
 // -------------------------------------------------------------------------- //
 
@@ -498,7 +514,7 @@ void alfArrayListRemoveObject(
  * \param[in] index Index to retrieve object at.
  * \return Object at index.
  */
-void* alfArrayListGet(AlfArrayList* list, uint64_t index);
+void* alfArrayListGet(const AlfArrayList* list, uint64_t index);
 
 // -------------------------------------------------------------------------- //
 
@@ -549,7 +565,7 @@ void alfArrayListShrinkToFit(AlfArrayList* list);
  * \param[in] list Array-list to get size of.
  * \return Size of array-list.
  */
-uint64_t alfGetArrayListSize(AlfArrayList* list);
+uint64_t alfGetArrayListSize(const AlfArrayList* list);
 
 // -------------------------------------------------------------------------- //
 
@@ -558,7 +574,20 @@ uint64_t alfGetArrayListSize(AlfArrayList* list);
  * \param[in] list Array-list to get data pointer from.
  * \return Data pointer.
  */
-uint8_t* alfArrayListGetData(AlfArrayList* list);
+const uint8_t* alfArrayListGetData(const AlfArrayList* list);
+
+// -------------------------------------------------------------------------- //
+
+/** Sort an array list in ascending order. The 'compareFunction' is used to 
+ * compare two objects to see which should appear before the other. Ties are 
+ * broken arbitrarily.
+ * \brief Sort array list.
+ * \param list List to sort.
+ * \param compareFunction Comparison function. 
+ */
+void alfArrayListSort(
+	AlfArrayList* list, 
+	PFN_AlfCollectionCompare compareFunction);
 
 // ========================================================================== //
 // Stack Structures
