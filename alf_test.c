@@ -44,6 +44,11 @@
 #	include <mach/mach_time.h>
 #endif
 
+// Linux headers
+#if defined(__linux__)
+#	include <time.h>
+#endif
+
 // ========================================================================== //
 // Color themes declarations
 // ========================================================================== //
@@ -283,6 +288,11 @@ static TIME_TYPE _alfHighPerformanceTimer()
 	}
 	TIME_TYPE time = mach_absolute_time();
 	return time * timebaseInfo.numer / timebaseInfo.denom;
+#elif defined(__linux__)
+        struct timespec time;
+        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time);
+        const TIME_TYPE ns = time.tv_sec * (TIME_TYPE)1e9 + time.tv_nsec;
+        return ns;
 #else
 	NOT_IMPLEMENTED
 #endif
