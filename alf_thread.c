@@ -39,6 +39,7 @@
 #elif defined(__linux__)
 #	define ALF_THREAD_TARGET_LINUX
 #	define ALF_THREAD_PTHREAD
+#	define _GNU_SOURCE
 #	include <semaphore.h>
 #	include <zconf.h>
 #	include <errno.h>
@@ -58,6 +59,7 @@ UNSUPPORTED_PLATFORM
 
 // Pthread header
 #if defined(ALF_THREAD_PTHREAD)
+#	include <signal.h>
 #	include <pthread.h>
 #endif
 
@@ -615,14 +617,14 @@ AlfBool alfJoinThreadTry(AlfThread* thread, uint32_t* exitCodeOut)
 #elif defined(ALF_THREAD_TARGET_APPLE)
 	ALF_THREAD_ASSERT(0, "Apple systems currently does not support try-join");
 #elif defined(ALF_THREAD_PTHREAD)
-	void* result;
-	int result = pthread_tryjoin_np(thread->handle, &result);
+	void* output;
+	int result = pthread_tryjoin_np(thread->handle, &output);
 	if (result == EBUSY)
 	{
 		*exitCodeOut = 0;
 		return ALF_FALSE;
 	}
-	exitCode = (uint32_t)((uint64_t)result);
+	exitCode = (uint32_t)((uint64_t)output);
 #endif
 
 	alfFreeThreadHandle(thread);
@@ -749,9 +751,9 @@ AlfBool alfSetThreadPriority(
 	}
 	int result = pthread_setschedprio(thread->handle, prio);
 
-	ALF_THREAD_ASSERT(error != EINVAL,
+	ALF_THREAD_ASSERT(result != EINVAL,
 		"Invalid thread priority. This is an internal error");
-	ALF_THREAD_ASSERT(error != ESRCH,
+	ALF_THREAD_ASSERT(result != ESRCH,
 		"Invalid thread handle. This is an internal error");
 	ALF_THREAD_ASSERT(result == 0,
 		"Failed to set thread priority");
@@ -970,7 +972,7 @@ AlfBool alfAcquireSemaphoreTimed(
 	int result;
 	if (milliseconds == 0)
 	{
-		result = sem_trywait(&semphore->handle);
+		result = sem_trywait(&semaphore->handle);
 	}
 	else
 	{
