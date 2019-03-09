@@ -251,7 +251,7 @@ typedef PFN_SuiteSetup PFN_SuiteTeardown;
 #define ALF_CHECK_FALSE(state, condition) \
 	alfCheckFalse(state, !(condition), #condition, __FILENAME__, __LINE__, NULL)
 /** Check that condition is false. With a reason **/
-#define ALF_CHECK_FALSE_R(state, condition, explanation) \
+#define ALF_CHECK_FALSE_R(state, condition, reason) \
 	alfCheckFalse(state, !(condition), #condition, __FILENAME__, __LINE__, reason)
 
 /** Check that a pointer is not NULL **/
