@@ -29,6 +29,7 @@
 // Standard headers
 #include <string.h>
 #include <memory.h>
+#include <malloc.h>
 
 // ========================================================================== //
 // Macro Declarations
@@ -367,6 +368,53 @@ void alfCleanupArrayList(AlfArrayList* list)
 	ALF_COLLECTION_FREE(list->buffer);
 }
 
+// -------------------------------------------------------------------------- //
+
+/** Swap the two objects at the specified indices **/
+void alfArrayListSwapIndices(
+	AlfArrayList* list, 
+	uint32_t index0, 
+	uint32_t index1)
+{
+	if (index0 >= list->size || index1 >= list->size) { return; }
+
+	void* object0 = alfArrayListGet(list, index0);
+	void* object1 = alfArrayListGet(list, index1);
+	void* temp = alloca(list->objectSize);
+	memcpy(temp, object0, list->objectSize);
+	memcpy(object0, object1, list->objectSize);
+	memcpy(object1, temp, list->objectSize);
+}
+
+// -------------------------------------------------------------------------- //
+
+/** Perform quicksort from 'low' to 'high' index **/
+void alfArrayListQuickSort(
+	AlfArrayList* list,
+	PFN_AlfCollectionCompare compareFunction,
+	uint32_t low,
+	uint32_t high)
+{
+	if (low < high)
+	{
+		void* pivot = alfArrayListGet(list, high);
+		uint32_t i = low;
+		for (uint32_t j = low; j < high; j++)
+		{
+			void* object = alfArrayListGet(list, j);
+			if (compareFunction(object, pivot) < 0)
+			{
+				alfArrayListSwapIndices(list, i, j);
+				i++;
+			}
+		}
+		alfArrayListSwapIndices(list, i, high);
+
+		alfArrayListQuickSort(list, compareFunction, low, i - 1);
+		alfArrayListQuickSort(list, compareFunction, i + 1, high);
+	}
+}
+
 // ========================================================================== //
 // ArrayList Functions
 // ========================================================================== //
@@ -521,7 +569,7 @@ void alfArrayListRemoveObject(AlfArrayList* list, void* object, PFN_AlfCollectio
 
 // -------------------------------------------------------------------------- //
 
-void* alfArrayListGet(AlfArrayList* list, uint64_t index)
+void* alfArrayListGet(const AlfArrayList* list, uint64_t index)
 {
 	ALF_COLLECTION_ASSERT(
 		index >= 0 && index < list->size, 
@@ -583,16 +631,25 @@ void alfArrayListShrinkToFit(AlfArrayList* list)
 
 // -------------------------------------------------------------------------- //
 
-uint64_t alfGetArrayListSize(AlfArrayList* list)
+uint64_t alfGetArrayListSize(const AlfArrayList* list)
 {
 	return list->size;
 }
 
 // -------------------------------------------------------------------------- //
 
-uint8_t* alfArrayListGetData(AlfArrayList* list)
+const uint8_t* alfArrayListGetData(const AlfArrayList* list)
 {
 	return list->buffer;
+}
+
+// -------------------------------------------------------------------------- //
+
+void alfArrayListSort(
+	AlfArrayList* list, 
+	PFN_AlfCollectionCompare compareFunction)
+{
+	alfArrayListQuickSort(list, compareFunction, 0, (uint32_t)(list->size - 1));
 }
 
 // ========================================================================== //

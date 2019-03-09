@@ -1,6 +1,6 @@
-// MIT License
+Ôªø// MIT License
 //
-// Copyright (c) 2018-2019 Filip Bjˆrklund
+// Copyright (c) 2018-2019 Filip Bj√∂rklund
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -32,6 +32,7 @@
 #include "alf_unicode.h"
 #include "alf_thread.h"
 #include "alf_collection.h"
+#include <stdio.h>
 
 // ========================================================================== //
 // Local Testing Data
@@ -75,16 +76,16 @@ uint32_t numbers0through79[] = {
 void test_alfUTF8Insert(AlfTestState* state)
 {
 	// Setup input strings
-	const char* input0 = "måndag";
+	const char* input0 = "m≈índag";
 
 	// Insert
 	char* output0 = alfUTF8Insert(input0, 3, 0, "ads");
-	ALF_CHECK_STREQ_R(state, output0, "månadsdag",
+	ALF_CHECK_STREQ_R(state, output0, "m≈ínadsdag",
 		"Add letters in word, no delete");
 
 	// Delete
 	char* output1 = alfUTF8Insert(input0, 3, 3, "");
-	ALF_CHECK_STREQ_R(state, output1, "mån",
+	ALF_CHECK_STREQ_R(state, output1, "m≈ín",
 		"Only delete letters, no adding");
 
 	// Replace
@@ -98,7 +99,7 @@ void test_alfUTF8Insert(AlfTestState* state)
 void test_alfUTF8Substring(AlfTestState* state)
 {
 	// Setup input strings
-	const char* input0 = "mÂndag";
+	const char* input0 = "m√•ndag";
 
 	// Check strings that starts at beginning
 	char* output0 = alfUTF8Substring(input0, 0, 0); // Empty word
@@ -108,13 +109,13 @@ void test_alfUTF8Substring(AlfTestState* state)
 	ALF_CHECK_STREQ_R(state, output1, "m",
 		"First letter at beginning of string");
 	char* output2 = alfUTF8Substring(input0, 0, 2); // First 2 letters
-	ALF_CHECK_STREQ_R(state, output2, "må",
+	ALF_CHECK_STREQ_R(state, output2, "m≈í",
 		"First two letters at beginning of string");
 	char* output3 = alfUTF8Substring(input0, 0, 5); // All except 1 letter
-	ALF_CHECK_STREQ_R(state, output3, "månda",
+	ALF_CHECK_STREQ_R(state, output3, "m≈índa",
 		"Entire string expect last letter");
 	char* output4 = alfUTF8Substring(input0, 0, 6); // All
-	ALF_CHECK_STREQ_R(state, output4, "måndag",
+	ALF_CHECK_STREQ_R(state, output4, "m≈índag",
 		"Entire string");
 
 	// Check strings that ends at the end
@@ -128,7 +129,7 @@ void test_alfUTF8Substring(AlfTestState* state)
 	ALF_CHECK_STREQ_R(state, output7, "ag",
 		"First two letters at beginning of string");
 	char* output8 = alfUTF8Substring(input0, 1, 5); // All except 1 letter
-	ALF_CHECK_STREQ_R(state, output8, "åndag",
+	ALF_CHECK_STREQ_R(state, output8, "≈índag",
 		"Entire string expect last letter");
 
 	// Invalid index
