@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2018-2019 Filip Björklund
+// Copyright (c) 2018-2019 Filip BjÃ¶rklund
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -106,7 +106,7 @@ typedef AlfBool(*PFN_AlfPredicate)(void* argument);
 // ========================================================================== //
 
 /** \enum AlfThreadPriority
- * \author Filip Björklund
+ * \author Filip BjÃ¶rklund
  * \date 03 oktober 2018 - 16:23
  * \brief Thread priorities.
  * \details
@@ -132,7 +132,7 @@ typedef enum AlfThreadPriority
 // -------------------------------------------------------------------------- //
 
 /** \enum AlfCache
- * \author Filip Björklund
+ * \author Filip BjÃ¶rklund
  * \date 08 januari 2019 - 20:32
  * \brief Caches in a CPU.
  * \details
@@ -157,7 +157,7 @@ typedef enum AlfCache
 // ========================================================================== //
 
 /** \struct AlfThread
- * \author Filip Björklund
+ * \author Filip BjÃ¶rklund
  * \date 03 oktober 2018 - 16:11
  * \brief Thread handle.
  * \details
@@ -168,7 +168,7 @@ typedef struct tag_AlfThread AlfThread;
 // -------------------------------------------------------------------------- //
 
 /** \struct AlfSemaphore
- * \author Filip Björklund
+ * \author Filip BjÃ¶rklund
  * \date 03 oktober 2018 - 16:25
  * \brief Semaphore.
  * \details
@@ -180,7 +180,7 @@ typedef struct tag_AlfSemaphore AlfSemaphore;
 // -------------------------------------------------------------------------- //
 
 /** \struct AlfMutex
- * \author Filip Björklund
+ * \author Filip BjÃ¶rklund
  * \date 03 oktober 2018 - 16:25
  * \brief Mutex.
  * \details
@@ -192,7 +192,7 @@ typedef struct tag_AlfMutex AlfMutex;
 // -------------------------------------------------------------------------- //
 
 /** \struct AlfConditionVariable
- * \author Filip Björklund
+ * \author Filip BjÃ¶rklund
  * \date 03 oktober 2018 - 16:25
  * \brief Condition variable.
  * \details
@@ -204,7 +204,7 @@ typedef struct tag_AlfConditionVariable AlfConditionVariable;
 // -------------------------------------------------------------------------- //
 
 /** \struct AlfReadWriteLock
- * \author Filip Björklund
+ * \author Filip BjÃ¶rklund
  * \date 08 januari 2019 - 21:47
  * \brief Read-write lock.
  * \details
@@ -217,7 +217,7 @@ typedef struct tag_AlfReadWriteLock AlfReadWriteLock;
 // -------------------------------------------------------------------------- //
 
 /** \struct AlfTLSHandle
- * \author Filip Björklund
+ * \author Filip BjÃ¶rklund
  * \date 03 oktober 2018 - 16:26
  * \brief Thread-local storage handle.
  * \details
