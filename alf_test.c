@@ -290,7 +290,7 @@ static TIME_TYPE _alfHighPerformanceTimer()
 	return time * timebaseInfo.numer / timebaseInfo.denom;
 #elif defined(__linux__)
         struct timespec time;
-        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time);
+        clock_gettime(CLOCK_BOOTTIME, &time);
         const TIME_TYPE ns = time.tv_sec * (TIME_TYPE)1e9 + time.tv_nsec;
         return ns;
 #else
