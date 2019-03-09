@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2018-2019 Filip Björklund
+// Copyright (c) 2018-2019 Filip BjÃ¶rklund
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -147,7 +147,7 @@ typedef void*(*PFN_AlfCollectionCopy)(const void* object);
 // ========================================================================== //
 
 /** \struct AlfListDesc
- * \author Filip Björklund
+ * \author Filip BjÃ¶rklund
  * \date 08 januari 2019 - 23:41
  * \brief List descriptor.
  * \details
@@ -172,7 +172,7 @@ typedef struct AlfListDesc
 // -------------------------------------------------------------------------- //
 
 /** \struct AlfList
- * \author Filip Björklund
+ * \author Filip BjÃ¶rklund
  * \date 08 januari 2019 - 23:38
  * \brief List of pointers.
  * \details
@@ -374,7 +374,7 @@ void* alfGetListData(AlfList* list);
 // ========================================================================== //
 
 /** \struct AlfArrayListDesc
- * \author Filip Björklund
+ * \author Filip Bjï¿½rklund
  * \date 09 januari 2019 - 16:58
  * \brief Array-list descriptor.
  * \details
@@ -394,7 +394,7 @@ typedef struct AlfArrayListDesc
 // -------------------------------------------------------------------------- //
 
 /** \struct AlfArrayList
- * \author Filip Björklund
+ * \author Filip Bjï¿½rklund
  * \date 09 januari 2019 - 17:00
  * \brief Array-list.
  * \details
@@ -594,7 +594,7 @@ void alfArrayListSort(
 // ========================================================================== //
 
 /** \struct AlfStackDesc
- * \author Filip Björklund
+ * \author Filip Bjï¿½rklund
  * \date 12 januari 2019 - 22:58
  * \brief Stack descriptor.
  * \details
@@ -613,7 +613,7 @@ typedef struct AlfStackDesc
 // -------------------------------------------------------------------------- //
 
 /** \struct AlfStack
- * \author Filip Björklund
+ * \author Filip Bjï¿½rklund
  * \date 12 januari 2019 - 22:57
  * \brief Stack.
  * \details
@@ -715,7 +715,7 @@ typedef AlfBool(*PFN_AlfHashTableIterate)(
 // ========================================================================== //
 
 /** \struct AlfHashTableDesc
- * \author Filip Björklund
+ * \author Filip Bjï¿½rklund
  * \date 09 januari 2019 - 17:43
  * \brief Hash table descriptor.
  * \details
@@ -744,7 +744,7 @@ typedef struct AlfHashTableDesc
 // -------------------------------------------------------------------------- //
 
 /** \struct AlfHashTable
- * \author Filip Björklund
+ * \author Filip Bjï¿½rklund
  * \date 09 januari 2019 - 17:42
  * \brief Hash table.
  * \details

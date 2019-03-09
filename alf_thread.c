@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2018-2019 Filip Björklund
+// Copyright (c) 2018-2019 Filip BjÃ¶rklund
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -845,7 +845,7 @@ AlfBool alfSetThreadName(const char* name)
 	}
 	else
 	{
-		// TODO(Filip Björklund): Implement using exceptions
+		// TODO(Filip Bjï¿½rklund): Implement using exceptions
 	}
 #elif defined(ALF_THREAD_PTHREAD)
 	// Create temp name if longer than 15 characters
@@ -855,7 +855,7 @@ AlfBool alfSetThreadName(const char* name)
 		char temp_name[16];
 		temp_name[15] = 0;
 		memcpy(temp_name, name, 15);
-		// TODO(Filip Björklund): Don't cut UTF-8 codepoints in half!
+		// TODO(Filip Bjï¿½rklund): Don't cut UTF-8 codepoints in half!
 
 		// Set the thread name
 		pthread_setname_np(temp_name);

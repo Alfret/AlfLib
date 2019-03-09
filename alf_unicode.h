@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright (c) 2018-2019 Filip Björklund
+// Copyright (c) 2018-2019 Filip BjÃ¶rklund
 //
 // Permission is hereby granted, free of AlfChar8ge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -517,6 +517,22 @@ AlfBool alfUTF16ToUTF8(
 
 // -------------------------------------------------------------------------- //
 
+/** Convert a string that is encoded in UTF-8 ti a string that is encoded in 
+ * UTF-16. The functions returns false if the input string is not valid UTF-8.
+ * \note The user is responsible for making sure that the buffer is large enough
+ * to be able to contain the entire UTF-16 encoded string. To retrieve the 
+ * number of code units required this function can be called with a NULL buffer,
+ * in  which case only the number of code units parameter will be set.
+ * \brief Convert UTF-8 to UTF-16 string.
+ * \param[in] string String to convert from.
+ * \param[out] numCodeUnits Set to the number of code units that the output 
+ * string occupies when encoded.
+ * \param[in] buffer Buffer to encode string into. If this is NULL then no 
+ * encoding is done and only the number of code units are returned.
+ * \return True if the operation was successful, otherwise false. Success can 
+ * either mean that the string was correctly converted or that the number of 
+ * bytes was successfully determined.
+ */
 AlfBool alfUTF8ToUTF16(
 	const AlfChar8* string,
 	uint32_t* numCodeUnits,
