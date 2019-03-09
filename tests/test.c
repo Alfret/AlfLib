@@ -32,6 +32,7 @@
 #include "alf_unicode.h"
 #include "alf_thread.h"
 #include "alf_collection.h"
+#include <stdio.h>
 
 // ========================================================================== //
 // Local Testing Data
@@ -295,49 +296,8 @@ void test_alfHashTableRemove(AlfTestState* state)
 // Main Function
 // ========================================================================== //
 
-
-int CompareInt(const void* i0, const void* i1)
-{
-	const uint32_t _i0 = *(uint32_t*)i0;
-	const uint32_t _i1 = *(uint32_t*)i1;
-	return (_i0 > _i1) ? 1 : (_i0 == _i1) ? 0 : -1;
-}
-
 int main()
 {
-
-	// Setup list
-	const uint32_t count = 9;
-	uint32_t ints[] = { 1, 6, 3, 4, 2, 9, 6, 5, 7 };
-	AlfArrayList* list = 
-		alfCreateArrayListForObjectSize(sizeof(uint32_t), NULL);
-	for (uint32_t i = 0; i < count; i++)
-	{
-		alfArrayListAdd(list, &ints[i]);
-	}
-
-	// Sort list
-	alfArrayListSort(list, CompareInt);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	// Startup
 	alfThreadStartup();
 

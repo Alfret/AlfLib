@@ -209,6 +209,30 @@ int64_t alfUTF8LastIndexOf(const AlfChar8* string, uint32_t codepoint);
 
 // -------------------------------------------------------------------------- //
 
+/** Returns the offset of the first occurance of a codepoint in a UTF-8 encoded
+ * string in code units. If the codepoint is not in the string then -1 is
+ * returned instead.
+ * \brief Returns first offset of codepoint.
+ * \param string String.
+ * \param codepoint Codepoint to get offset of.
+ * \return Offset of codepoint or -1 if codepoint was not found in string.
+ */
+int64_t alfUTF8OffsetOf(const AlfChar8* string, uint32_t codepoint);
+
+// -------------------------------------------------------------------------- //
+
+/** Returns the offset of the last occurance of a codepoint in a UTF-8 encoded
+ * string in code units. If the codepoint is not in the string then -1 is
+ * returned instead.
+ * \brief Returns last offset of codepoint.
+ * \param string String.
+ * \param codepoint Codepoint to get offset of.
+ * \return Offset of codepoint or -1 if codepoint was not found in string.
+ */
+int64_t alfUTF8LastOffsetOf(const AlfChar8* string, uint32_t codepoint);
+
+// -------------------------------------------------------------------------- //
+
 /** Returns whether or not a UTF-8 encoded string starts with the specified
  * codepoint.
  * \note False is returned if string is NULL.
@@ -408,6 +432,62 @@ AlfBool alfUTF16Encode(
  * codepoint is not a valid unicode codepoint.
  */
 uint32_t alfUTF16CodepointWidth(uint32_t codepoint);
+
+// -------------------------------------------------------------------------- //
+
+/** Returns the length of an UTF-16 encoded string in number of codepoints.
+ * \brief Returns UTF-8 string length.
+ * \param string String to get length of.
+ * \return Length of string.
+ */
+uint64_t alfUTF16StringLength(const AlfChar16* string);
+
+// -------------------------------------------------------------------------- //
+
+/** Returns the index of the first occurance of a codepoint in a UTF-16 encoded
+ * string. If the codepoint is not in the string then -1 is returned instead.
+ * \brief Returns first index of codepoint.
+ * \param string String.
+ * \param codepoint Codepoint to get index of.
+ * \return Index of codepoint or -1 if codepoint was not found in string.
+ */
+int64_t alfUTF16IndexOf(const AlfChar16* string, uint32_t codepoint);
+
+// -------------------------------------------------------------------------- //
+
+/** Returns the index of the last occurance of a codepoint in a UTF-16 encoded
+ * string. If the codepoint is not in the string then -1 is returned instead.
+ * \note -1 is also returned if string is NULL.
+ * \brief Returns last index of codepoint.
+ * \param string String.
+ * \param codepoint Codepoint to get index of.
+ * \return Index of codepoint of -1 if codepoint was not found in string.
+ */
+int64_t alfUTF16LastIndexOf(const AlfChar16* string, uint32_t codepoint);
+
+// -------------------------------------------------------------------------- //
+
+/** Returns the offset of the first occurance of a codepoint in a UTF-16 encoded
+ * string in code units. If the codepoint is not in the string then -1 is 
+ * returned instead.
+ * \brief Returns first offset of codepoint.
+ * \param string String.
+ * \param codepoint Codepoint to get offset of.
+ * \return Offset of codepoint or -1 if codepoint was not found in string.
+ */
+int64_t alfUTF16OffsetOf(const AlfChar16* string, uint32_t codepoint);
+
+// -------------------------------------------------------------------------- //
+
+/** Returns the offset of the last occurance of a codepoint in a UTF-16 encoded
+ * string in code units. If the codepoint is not in the string then -1 is
+ * returned instead.
+ * \brief Returns last offset of codepoint.
+ * \param string String.
+ * \param codepoint Codepoint to get offset of.
+ * \return Offset of codepoint or -1 if codepoint was not found in string.
+ */
+int64_t alfUTF16LastOffsetOf(const AlfChar16* string, uint32_t codepoint);
 
 // ========================================================================== //
 // Conversion Functions

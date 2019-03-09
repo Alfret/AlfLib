@@ -263,7 +263,7 @@ uint64_t alfUTF8StringLength(const AlfChar8* string)
 		offset += alfUTF8CodepointWidthFromFirstByte(c);
 		length++;
 	}
-	return length;
+	return length - 1;
 }
 
 // -------------------------------------------------------------------------- //
@@ -311,6 +311,49 @@ int64_t alfUTF8LastIndexOf(const AlfChar8* string, uint32_t codepoint)
 		index++;
 	}
 	return foundIndex;
+}
+
+// -------------------------------------------------------------------------- //
+
+int64_t alfUTF8OffsetOf(const AlfChar8* string, uint32_t codepoint)
+{
+	if (!string) { return -1; }
+
+	uint32_t _codepoint;
+	uint32_t bytecount;
+	uint64_t offset = 0;
+	while (string[offset])
+	{
+		const AlfBool _valid =
+			alfUTF8Decode(string, offset, &_codepoint, &bytecount);
+		if (!_valid) { return -1; }
+		if (_codepoint == codepoint) { return offset; }
+
+		offset += bytecount;
+	}
+	return -1;
+}
+
+// -------------------------------------------------------------------------- //
+
+int64_t alfUTF8LastOffsetOf(const AlfChar8* string, uint32_t codepoint)
+{
+	if (!string) { return -1; }
+
+	uint32_t _codepoint;
+	uint32_t bytecount;
+	uint64_t offset = 0;
+	int64_t foundOffset = -1;
+	while (string[offset] != 0)
+	{
+		const AlfBool _valid =
+			alfUTF8Decode(string, offset, &_codepoint, &bytecount);
+		if (!_valid) { return foundOffset; }
+		if (_codepoint == codepoint) { foundOffset = offset; }
+
+		offset += bytecount;
+	}
+	return foundOffset;
 }
 
 // -------------------------------------------------------------------------- //
@@ -582,6 +625,25 @@ AlfBool alfUTF8Iterate(
 #define ALF_UTF16_CONT_MASK 0x3F
 
 // ========================================================================== //
+// UTF-16 Private Functions
+// ========================================================================== //
+
+/** Returns number of codeunits that a codepoint is encoded in for the UTF-16 
+ * encoding **/
+int32_t alfUTF16CodepointWidthFromFirstByte(AlfChar16 c)
+{
+	if (c <= 0xFFFF && (c < 0xD800 || c > 0xDFFF))
+	{
+		return 1;
+	}
+	if (c <= 0x10FFFF)
+	{
+		return 2;
+	}
+	return -1;
+}
+
+// ========================================================================== //
 // UTF-16 Functions
 // ========================================================================== //
 
@@ -591,17 +653,19 @@ AlfBool alfUTF16Decode(
 	uint32_t* codepoint, 
 	uint32_t* numCodeUnits)
 {
-	const uint16_t firstPart = string[offset];
+	const AlfChar16 firstPart = string[offset];
 
 	// Encoded in single 16-bit value
-	if (firstPart <= 0xFFFF && (firstPart < 0xD800 || firstPart > 0xDFFF))
+	const int32_t codeUnitCount = 
+		alfUTF16CodepointWidthFromFirstByte(firstPart);
+	if (codeUnitCount == 1)
 	{
 		*codepoint = (uint32_t)firstPart;
 		*numCodeUnits = 1;
 		return ALF_TRUE;
 	}
 	// Encoded as surrogate pair
-	if (firstPart <= 0x10FFFF)
+	if (codeUnitCount == 2)
 	{
 		const uint16_t secondPart = string[offset + 1];
 		const uint32_t high = (firstPart - 0xD800) * 0x400;
@@ -648,6 +712,127 @@ uint32_t alfUTF16CodepointWidth(uint32_t codepoint)
 	return codepoint < 0x010000 ? 1 : 2;
 }
 
+// -------------------------------------------------------------------------- //
+
+uint64_t alfUTF16StringLength(const AlfChar16* string)
+{
+	if (!string) { return 0; }
+
+	uint64_t length = 0, offset = 0;
+	AlfChar16 c;
+	while ((c = string[offset]))
+	{
+		offset += alfUTF16CodepointWidthFromFirstByte(c);
+		length++;
+	}
+	return length - 1;
+}
+
+// -------------------------------------------------------------------------- //
+
+int64_t alfUTF16IndexOf(const AlfChar16* string, uint32_t codepoint)
+{
+	if (!string) { return -1; }
+
+	uint32_t _codepoint;
+	uint32_t codeUnitCount;
+	uint64_t offset = 0;
+	uint64_t index = 0;
+	while (string[offset])
+	{
+		const AlfBool _valid = alfUTF16Decode(
+			string, 
+			offset, 
+			&_codepoint, 
+			&codeUnitCount
+		);
+		if (!_valid) { return -1; }
+		if (_codepoint == codepoint) { return index; }
+
+		offset += codeUnitCount;
+		index++;
+	}
+	return -1;
+}
+
+// -------------------------------------------------------------------------- //
+
+int64_t alfUTF16LastIndexOf(const AlfChar16* string, uint32_t codepoint)
+{
+	if (!string) { return -1; }
+
+	uint32_t _codepoint;
+	uint32_t bytecount;
+	uint64_t offset = 0;
+	uint64_t index = 0;
+	int64_t foundIndex = -1;
+	while (string[offset] != 0)
+	{
+		const AlfBool _valid = alfUTF16Decode(
+			string, 
+			offset, 
+			&_codepoint, 
+			&bytecount
+		);
+		if (!_valid) { return foundIndex; }
+		if (_codepoint == codepoint) { foundIndex = index; }
+
+		offset += bytecount;
+		index++;
+	}
+	return foundIndex;
+}
+
+// -------------------------------------------------------------------------- //
+
+int64_t alfUTF16OffsetOf(const AlfChar16* string, uint32_t codepoint)
+{
+	if (!string) { return -1; }
+
+	uint32_t _codepoint;
+	uint32_t codeUnitCount;
+	uint64_t offset = 0;
+	while (string[offset])
+	{
+		const AlfBool _valid = alfUTF16Decode(
+			string,
+			offset,
+			&_codepoint,
+			&codeUnitCount
+		);
+		if (!_valid) { return -1; }
+		if (_codepoint == codepoint) { return offset; }
+
+		offset += codeUnitCount;
+	}
+	return -1;
+}
+
+// -------------------------------------------------------------------------- //
+
+int64_t alfUTF16LastOffsetOf(const AlfChar16* string, uint32_t codepoint)
+{
+	if (!string) { return -1; }
+
+	uint32_t _codepoint;
+	uint32_t bytecount;
+	uint64_t offset = 0;
+	int64_t foundOffset = -1;
+	while (string[offset] != 0)
+	{
+		const AlfBool _valid = alfUTF16Decode(
+			string,
+			offset,
+			&_codepoint,
+			&bytecount
+		);
+		if (!_valid) { return foundOffset; }
+		if (_codepoint == codepoint) { foundOffset = offset; }
+
+		offset += bytecount;
+	}
+	return foundOffset;
+}
 
 // ========================================================================== //
 // Conversion Functions
