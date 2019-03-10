@@ -173,15 +173,26 @@ static char sFormatBuffer[ALF_TEST_FORMAT_BUFFER_SIZE];
 // Private structures
 // ========================================================================== //
 
+/** Internal test structure **/
+typedef struct AlfTestInternal
+{
+	/** Name of test **/
+	char* name;
+	/** Test function **/
+	PFN_AlfTest TestFunction;
+} AlfTestInternal;
+
+// -------------------------------------------------------------------------- //
+
 /** Private test-state structure **/
 typedef struct tag_AlfTestState
 {
 	/** Suite that state represents **/
 	AlfTestSuite* suite;
 	/** Total check count **/
-	INT_TYPE count;
+	AlfTestInt count;
 	/** Failed check count **/
-	INT_TYPE failCount;
+	AlfTestInt failCount;
 } tag_AlfTestState;
 
 // -------------------------------------------------------------------------- //
@@ -190,9 +201,9 @@ typedef struct tag_AlfTestState
 typedef struct tag_AlfTestSuite
 {
 	/** Setup function **/
-	PFN_SuiteSetup Setup;
+	PFN_AlfSuiteSetup Setup;
 	/** Teardown function **/
-	PFN_SuiteTeardown Teardown;
+	PFN_AlfSuiteTeardown Teardown;
 
 	/** Name of test suite **/
 	char* name;
@@ -203,9 +214,9 @@ typedef struct tag_AlfTestSuite
 	AlfTestState state;
 
 	/** Test count **/
-	INT_TYPE testCount;
+	AlfTestInt testCount;
 	/** Tests**/
-	AlfTest* tests;
+	AlfTestInternal* tests;
 } tag_AlfTestSuite;
 
 // ========================================================================== //
@@ -217,7 +228,7 @@ typedef struct tag_AlfTestSuite
 static void _alfSetupConsole()
 {
 #if defined(_WIN32)
-	static INT_TYPE isSetup = 0;
+	static AlfTestInt isSetup = 0;
 	if (!isSetup)
 	{
 		// Enable virtual terminal processing for Color support
@@ -243,9 +254,9 @@ static void _alfSetupConsole()
 
 // -------------------------------------------------------------------------- //
 
-static INT_TYPE _alfStringLength(const char* string)
+static AlfTestInt _alfStringLength(const char* string)
 {
-	INT_TYPE length = 0;
+	AlfTestInt length = 0;
 	while (string[length++] != 0) {}
 	return length - 1;
 }
@@ -253,10 +264,11 @@ static INT_TYPE _alfStringLength(const char* string)
 // -------------------------------------------------------------------------- //
 
 /** Return a copy of a nul-terminated c-string **/
-static char* _alfStringCopy(char* string)
+static char* _alfTestStringCopy(const char* string)
 {
 	const size_t length = _alfStringLength(string);
 	char* buffer = malloc(length + 1);
+	if (!buffer) { return NULL;  }
 	memcpy(buffer, string, length + 1);
 	return buffer;
 }
@@ -264,11 +276,11 @@ static char* _alfStringCopy(char* string)
 // -------------------------------------------------------------------------- //
 
 /** Returns a relative time from high-performance timer **/
-static TIME_TYPE _alfHighPerformanceTimer()
+static AlfTestTime _alfHighPerformanceTimer()
 {
 #if defined(_WIN32)
 	// Only query the performance counter frequency once
-	static TIME_TYPE frequency = 0;
+	static AlfTestTime frequency = 0;
 	if (frequency == 0)
 	{
 		LARGE_INTEGER f;
@@ -279,11 +291,11 @@ static TIME_TYPE _alfHighPerformanceTimer()
 	// Query the performance counter
 	LARGE_INTEGER c;
 	QueryPerformanceCounter(&c);
-	const TIME_TYPE counter = c.QuadPart;
+	const AlfTestTime counter = c.QuadPart;
 
 	// Convert counter to nanoseconds and return
 	const double s = (double)counter / frequency;
-	const TIME_TYPE ns = (TIME_TYPE)(s * 1e9);
+	const AlfTestTime ns = (AlfTestTime)(s * 1e9);
 	return ns;
 #elif defined(__APPLE__)
 	static mach_timebase_info_data_t timebaseInfo;
@@ -291,12 +303,12 @@ static TIME_TYPE _alfHighPerformanceTimer()
 	{
 		mach_timebase_info(&timebaseInfo);
 	}
-	TIME_TYPE time = mach_absolute_time();
+	AlfTestTime time = mach_absolute_time();
 	return time * timebaseInfo.numer / timebaseInfo.denom;
 #elif defined(__linux__)
         struct timespec time;
         clock_gettime(CLOCK_BOOTTIME, &time);
-        const TIME_TYPE ns = time.tv_sec * (TIME_TYPE)1e9 + time.tv_nsec;
+        const AlfTestTime ns = time.tv_sec * (AlfTestTime)1e9 + time.tv_nsec;
         return ns;
 #else
 	NOT_IMPLEMENTED
@@ -335,10 +347,10 @@ static void _alfPrintAbout()
 /** Internal check function **/
 static void alfTestCheckInternal(
 	AlfTestState* state, 
-	BOOL_TYPE condition,
+	AlfTestBool condition,
 	const char* message, 
 	const char* file, 
-	INT_TYPE line,
+	AlfTestInt line,
 	const char* explanation)
 {
 	state->count++;
@@ -372,7 +384,8 @@ static char* alfTestFormatString(const char* format, ...)
 	va_end(copy);
 
 	// Copy buffer
-	char* result = malloc(writtenBytes + 1);
+	char* result = malloc(writtenBytes + 1ull);
+	if (!result) { return NULL; }
 	memcpy(result, sFormatBuffer, writtenBytes);
 	result[writtenBytes] = 0;
 
@@ -384,7 +397,7 @@ static char* alfTestFormatString(const char* format, ...)
 // Function implementations
 // ========================================================================== //
 
-AlfTestSuite* alfCreateTestSuite(char* name, AlfTest* tests, INT_TYPE count)
+AlfTestSuite* alfCreateTestSuite(char* name, AlfTest* tests, AlfTestInt count)
 {
 	// Do required setup
 	_alfSetupConsole();
@@ -394,18 +407,24 @@ AlfTestSuite* alfCreateTestSuite(char* name, AlfTest* tests, INT_TYPE count)
 	if (!suite) { return NULL; }
 
 	// Setup suite
-	suite->name = _alfStringCopy(name);
+	suite->name = _alfTestStringCopy(name);
 	suite->Setup = _alfDefaultSuiteSetup;
 	suite->Teardown = _alfDefaultSuiteTeardown;
 	suite->state = (AlfTestState) { suite, 0, 0 };
 
 	// Setup tests
 	suite->testCount = count;
-	suite->tests = malloc(sizeof(AlfTest) * suite->testCount);
-	for (INT_TYPE i = 0; i < suite->testCount; i++)
+	suite->tests = malloc(sizeof(AlfTestInternal) * suite->testCount);
+	if (!suite->tests)
 	{
-		suite->tests[i].name = _alfStringCopy(tests[i].name);
-		suite->tests[i].TestFunction = tests[i].TestFunction;
+		free(suite);
+		return NULL;
+	}
+	for (AlfTestInt i = 0; i < suite->testCount; i++)
+	{
+		AlfTestInternal* test = &suite->tests[i];
+		test->name = _alfTestStringCopy(tests[i].name);
+		test->TestFunction = tests[i].TestFunction;
 	}
 
 	return suite;
@@ -415,7 +434,7 @@ AlfTestSuite* alfCreateTestSuite(char* name, AlfTest* tests, INT_TYPE count)
 
 void alfDestroyTestSuite(AlfTestSuite* suite)
 {
-	for (INT_TYPE i = 0; i < suite->testCount; i++)
+	for (AlfTestInt i = 0; i < suite->testCount; i++)
 	{
 		free(suite->tests[i].name);
 	}
@@ -447,7 +466,7 @@ void* alfGetSuiteUserDataFromState(AlfTestState* state)
 
 // -------------------------------------------------------------------------- //
 
-void alfSetSuiteSetupCallback(AlfTestSuite* suite, PFN_SuiteSetup callback)
+void alfSetSuiteSetupCallback(AlfTestSuite* suite, PFN_AlfSuiteSetup callback)
 {
 	suite->Setup = callback;
 }
@@ -456,7 +475,7 @@ void alfSetSuiteSetupCallback(AlfTestSuite* suite, PFN_SuiteSetup callback)
 
 void alfSetSuiteTeardownCallback(
 	AlfTestSuite* suite, 
-	PFN_SuiteTeardown callback)
+	PFN_AlfSuiteTeardown callback)
 {
 	suite->Teardown = callback;
 }
@@ -477,7 +496,7 @@ void alfClearSuiteTeardownCallback(AlfTestSuite* suite)
 
 // -------------------------------------------------------------------------- //
 
-INT_TYPE alfRunSuite(AlfTestSuite* suite)
+AlfTestInt alfRunSuite(AlfTestSuite* suite)
 {
 	AlfTestSuite* suites[1];
 	suites[0] = suite;
@@ -486,18 +505,18 @@ INT_TYPE alfRunSuite(AlfTestSuite* suite)
 
 // -------------------------------------------------------------------------- //
 
-INT_TYPE alfRunSuites(AlfTestSuite** suites, INT_TYPE suiteCount)
+AlfTestInt alfRunSuites(AlfTestSuite** suites, AlfTestInt suiteCount)
 {
 	_alfPrintAbout();
 
 	// Run all suites
-	INT_TYPE totalCheckCount = 0;
-	INT_TYPE failCheckCount = 0;
-	INT_TYPE totalTestCount = 0;
-	INT_TYPE failTestCount = 0;
-	INT_TYPE failSuiteCount = 0;
-	const TIME_TYPE startTime = _alfHighPerformanceTimer();
-	for (INT_TYPE suiteIndex = 0; suiteIndex < suiteCount; suiteIndex++)
+	AlfTestInt totalCheckCount = 0;
+	AlfTestInt failCheckCount = 0;
+	AlfTestInt totalTestCount = 0;
+	AlfTestInt failTestCount = 0;
+	AlfTestInt failSuiteCount = 0;
+	const AlfTestTime startTime = _alfHighPerformanceTimer();
+	for (AlfTestInt suiteIndex = 0; suiteIndex < suiteCount; suiteIndex++)
 	{
 		AlfTestSuite* suite = suites[suiteIndex];
 		suite->Setup(suite);
@@ -505,21 +524,21 @@ INT_TYPE alfRunSuites(AlfTestSuite** suites, INT_TYPE suiteCount)
 			suite->name);
 
 		// Run all tests in suite
-		const INT_TYPE suiteFailTestCountBefore = failTestCount;
-		const TIME_TYPE suiteStartTime = _alfHighPerformanceTimer();
-		for (INT_TYPE testIndex = 0; testIndex < suite->testCount; testIndex++)
+		const AlfTestInt suiteFailTestCountBefore = failTestCount;
+		const AlfTestTime suiteStartTime = _alfHighPerformanceTimer();
+		for (AlfTestInt testIndex = 0; testIndex < suite->testCount; testIndex++)
 		{
 			// Clear state
 			suite->state.count = 0;
 			suite->state.failCount = 0;
 
 			// Run test
-			AlfTest* test = &suite->tests[testIndex];
+			AlfTestInternal* test = &suite->tests[testIndex];
 			printf("Running " ALF_TEST_CC_NAME "%s" ALF_TEST_CC_RESET ":\n", 
 				test->name);
-			const TIME_TYPE timeBefore = _alfHighPerformanceTimer();
+			const AlfTestTime timeBefore = _alfHighPerformanceTimer();
 			test->TestFunction(&suite->state);
-			const TIME_TYPE timeDelta = _alfHighPerformanceTimer() - timeBefore;
+			const AlfTestTime timeDelta = _alfHighPerformanceTimer() - timeBefore;
 			printf("\tTest finished in " ALF_TEST_CC_TIME "%.3f" 
 				ALF_TEST_CC_RESET " ms\n", timeDelta / 1000000.0);
 
@@ -529,19 +548,19 @@ INT_TYPE alfRunSuites(AlfTestSuite** suites, INT_TYPE suiteCount)
 			failCheckCount += suite->state.failCount;
 			if (suite->state.failCount > 0) { failTestCount++; }
 		}
-		const TIME_TYPE suiteElapsedTime = 
+		const AlfTestTime suiteElapsedTime = 
 			_alfHighPerformanceTimer() - suiteStartTime;
 		printf("Suite finished in " ALF_TEST_CC_TIME "%.3f" ALF_TEST_CC_RESET 
 			" ms\n\n", suiteElapsedTime / 1000000.0);
 		if (failTestCount - suiteFailTestCountBefore > 0) { failSuiteCount++; }
 		suite->Teardown(suite);
 	}
-	const TIME_TYPE totalTime = _alfHighPerformanceTimer() - startTime;
+	const AlfTestTime totalTime = _alfHighPerformanceTimer() - startTime;
 
 	// Print summary and return
-	const INT_TYPE passSuiteCount = suiteCount - failSuiteCount;
-	const INT_TYPE passCheckCount = totalCheckCount - failCheckCount;
-	const INT_TYPE passTestCount = totalTestCount - failTestCount;
+	const AlfTestInt passSuiteCount = suiteCount - failSuiteCount;
+	const AlfTestInt passCheckCount = totalCheckCount - failCheckCount;
+	const AlfTestInt passTestCount = totalTestCount - failTestCount;
 	printf(ALF_TEST_CC_SUITE "SUMMARY\n" ALF_TEST_CC_RESET);
 	printf("Type\t\tTotal\t\tPass\t\tFail\n");
 	printf("Suite\t\t%i\t\t%i\t\t%i\n", 
@@ -571,11 +590,11 @@ INT_TYPE alfRunSuites(AlfTestSuite** suites, INT_TYPE suiteCount)
 
 void alfCheckTrue(
 	AlfTestState* state,
-	BOOL_TYPE predicate,
+	AlfTestBool predicate,
 	const char* predicateString,
 	const char* file,
-	INT_TYPE line,
-	const char* reason)
+	AlfTestInt line,
+	AlfTestCheckParameters parameters)
 {
 	char* message = alfTestFormatString(
 		"TRUE(%s)",
@@ -587,7 +606,7 @@ void alfCheckTrue(
 		message,
 		file,
 		line,
-		reason
+		parameters.reason
 	);
 	free(message);
 }
@@ -596,11 +615,11 @@ void alfCheckTrue(
 
 void alfCheckFalse(
 	AlfTestState* state,
-	BOOL_TYPE predicate,
+	AlfTestBool predicate,
 	const char* predicateString,
 	const char* file,
-	INT_TYPE line,
-	const char* reason)
+	AlfTestInt line,
+	AlfTestCheckParameters parameters)
 {
 	char* message = alfTestFormatString(
 		"FALSE(%s)",
@@ -612,7 +631,7 @@ void alfCheckFalse(
 		message,
 		file,
 		line,
-		reason
+		parameters.reason
 	);
 	free(message);
 }
@@ -624,8 +643,8 @@ void alfCheckNotNull(
 	void* pointer,
 	const char* pointerText,
 	const char* file,
-	INT_TYPE line,
-	const char* reason)
+	AlfTestInt line,
+	AlfTestCheckParameters parameters)
 {
 	char* message = alfTestFormatString(
 		"NOT_NULL(%s (0x%p))",
@@ -637,7 +656,7 @@ void alfCheckNotNull(
 		message,
 		file,
 		line,
-		reason
+		parameters.reason
 	);
 	free(message);
 }
@@ -649,8 +668,8 @@ void alfCheckNull(
 	void* pointer,
 	const char* pointerText,
 	const char* file,
-	INT_TYPE line,
-	const char* reason)
+	AlfTestInt line,
+	AlfTestCheckParameters parameters)
 {
 	char* message = alfTestFormatString(
 		"NULL(%s (0x%p))",
@@ -662,7 +681,7 @@ void alfCheckNull(
 		message,
 		file,
 		line,
-		reason
+		parameters.reason
 	);
 	free(message);
 }
@@ -675,17 +694,17 @@ void alfCheckMemEq(
 	const void* m1,
 	const char* var0,
 	const char* var1,
-	SIZE_TYPE size,
+	AlfTestSize size,
 	const char* file,
-	INT_TYPE line,
-	const char* reason)
+	AlfTestInt line,
+	AlfTestCheckParameters parameters)
 {
 	char* message = alfTestFormatString(
 		"MEM_EQ(%s == %s)",
 		m0,
 		m0
 	);
-	INT_TYPE predicate =
+	const AlfTestInt predicate =
 		(m0 == NULL && m1 == NULL) ||
 		(m0 && m1 && memcmp(m0, m1, size) == 0);
 	alfTestCheckInternal(
@@ -694,7 +713,7 @@ void alfCheckMemEq(
 		message,
 		file,
 		line,
-		reason
+		parameters.reason
 	);
 	free(message);
 }
@@ -708,15 +727,15 @@ void alfCheckStrEq(
 	const char* var0,
 	const char* var1,
 	const char* file,
-	INT_TYPE line,
-	const char* reason)
+	AlfTestInt line,
+	AlfTestCheckParameters parameters)
 {
 	char* message = alfTestFormatString(
 		"STR_EQ(%s == %s)",
 		str0,
 		str1
 	);
-	INT_TYPE predicate =
+	const AlfTestInt predicate =
 		(str0 == NULL && str1 == NULL) ||
 		(str0 && str1 && strcmp(str0, str1) == 0);
 	alfTestCheckInternal(
@@ -725,7 +744,67 @@ void alfCheckStrEq(
 		message, 
 		file, 
 		line, 
-		reason
+		parameters.reason
+	);
+	free(message);
+}
+
+// -------------------------------------------------------------------------- //
+
+void alfCheckFloatEq(
+	AlfTestState* state,
+	const float* float0,
+	const float* float1,
+	const char* var0,
+	const char* var1,
+	const char* file,
+	AlfTestInt line,
+	AlfTestCheckParameters parameters)
+{
+	char* message = alfTestFormatString(
+		"FLOAT_EQ(%f == %f)",
+		float0,
+		float1
+	);
+	const AlfTestInt predicate =
+		(float0 - float1) <= ALF_TEST_FLOAT_EPSILON;
+	alfTestCheckInternal(
+		state,
+		predicate,
+		message,
+		file,
+		line,
+		parameters.reason
+	);
+	free(message);
+}
+
+// -------------------------------------------------------------------------- //
+
+void alfCheckDoubleEq(
+	AlfTestState* state,
+	const double* double0,
+	const double* double1,
+	const char* var0,
+	const char* var1,
+	const char* file,
+	AlfTestInt line,
+	AlfTestCheckParameters parameters)
+{
+	char* message = alfTestFormatString(
+		"DOUBLE_EQ(%f == %f)",
+		double0,
+		double1
+	);
+	const AlfTestInt predicate =
+		(double0 - double1) <= ALF_TEST_DOUBLE_EPSILON;
+	alfTestCheckInternal(
+		state,
+		predicate,
+		message,
+		file,
+		line,
+		parameters.reason
 	);
 	free(message);
 }
@@ -734,7 +813,7 @@ void alfCheckStrEq(
 
 char* alfLastIndexOf(char* string, char character)
 {
-	INT_TYPE length = _alfStringLength(string);
+	AlfTestInt length = _alfStringLength(string);
 	while (length > 0)
 	{
 		if (string[length] == character)
