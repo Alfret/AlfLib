@@ -647,8 +647,8 @@ void alfCheckNotNull(
 	AlfTestCheckParameters parameters)
 {
 	char* message = alfTestFormatString(
-		"NOT_NULL(%s (0x%p))",
-		pointerText, pointer
+		"NOT_NULL(0x%p (%s))",
+		pointer, pointerText
 	);
 	alfTestCheckInternal(
 		state,
@@ -672,8 +672,8 @@ void alfCheckNull(
 	AlfTestCheckParameters parameters)
 {
 	char* message = alfTestFormatString(
-		"NULL(%s (0x%p))",
-		pointerText, pointer
+		"NULL(0x%p (%s))",
+		pointer, pointerText
 	);
 	alfTestCheckInternal(
 		state,
@@ -731,7 +731,7 @@ void alfCheckStrEq(
 	AlfTestCheckParameters parameters)
 {
 	char* message = alfTestFormatString(
-		"STR_EQ(%s == %s)",
+		"STR_EQ(\"%s\" == \"%s\")",
 		str0,
 		str1
 	);
