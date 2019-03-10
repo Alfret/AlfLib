@@ -119,9 +119,9 @@ extern "C" {
  * - ALF_CHECK_FALSE: For checking that a condition is false.
  * - ALF_CHECK_NOT_NULL: For checking that a pointer is not NULL.
  * - ALF_CHECK_NULL: For checking that a pointer is NULL.
- * - ALF_CHECK_MEMEQ: For checking that two regions of memory contains the same 
+ * - ALF_CHECK_MEM_EQ: For checking that two regions of memory contains the same 
  *		data.
- * - ALF_CHECK_STREQ: For checking that two nul-terminated c-strings are equal.
+ * - ALF_CHECK_STR_EQ: For checking that two nul-terminated c-strings are equal.
  * - ALF_CHECK_FLOAT_EQ: For checking that two single-precision floating-point 
  *		numbers are equal. This takes into account the machine epsilon.
  * - ALF_CHECK_DOUBLE_EQ: For checking that two double-precision floating-point 
@@ -162,7 +162,7 @@ extern "C" {
  *     }
  *     AlfTestSuite* suite = alfCreateTestSuite("Demo Suite", tests, 3);
  * 
- *     const uint32_t fails = alfRunSuite(suite);
+ *     const int fails = alfRunSuite(suite);
  *     alfDestroyTestSuite(suite);
  * 	   return fails;
  * }
@@ -339,10 +339,10 @@ typedef struct AlfTestData
 // -------------------------------------------------------------------------- //
 
 /** Macro for defining a test **/
-#define ALF_TEST(name, group) \
-	void ALF_TEST_NAME(name, group) (AlfTestState* _state_internal_);	\
-	static AlfTestData ALF_TEST_DATA_NAME(name, group) =				\
-		{ #group "_" #name, __LINE__ + 1, ALF_TEST_NAME(name, group) };	\
+#define ALF_TEST(name, group)												\
+	void ALF_TEST_NAME(name, group) (AlfTestState* _state_internal_);		\
+	static AlfTestData ALF_TEST_DATA_NAME(name, group) =					\
+		{ #group "_" #name, __LINE__ + 1, ALF_TEST_NAME(name, group) };		\
 	void ALF_TEST_NAME(name, group) (AlfTestState* _state_internal_)
 
 // -------------------------------------------------------------------------- //
@@ -366,7 +366,7 @@ typedef struct AlfTestData
 // -------------------------------------------------------------------------- //
 
 /** Check that a pointer is not NULL **/
-#define ALF_CHECK_NOT_NULL(pointer, ...)	\
+#define ALF_CHECK_NOT_NULL(pointer, ...)									\
 	alfCheckNotNull(														\
 		_state_internal_, pointer, #pointer, __FILENAME__, __LINE__,		\
 		(AlfTestCheckParameters){ ._u = 0, __VA_ARGS__ }					\
@@ -384,7 +384,7 @@ typedef struct AlfTestData
 // -------------------------------------------------------------------------- //
 
 /** Check that two memory regions contains the same data **/
-#define ALF_CHECK_MEMEQ(m0, m1, size, ...)	\
+#define ALF_CHECK_MEM_EQ(m0, m1, size, ...)									\
 	alfCheckMemEq(															\
 		_state_internal_, m0, m1, #m0, #m1, size, __FILENAME__, __LINE__,	\
 		(AlfTestCheckParameters){ ._u = 0, __VA_ARGS__ }					\
@@ -393,7 +393,7 @@ typedef struct AlfTestData
 // -------------------------------------------------------------------------- //
 
 /** Check that two nul-terminated c-strings are equal **/
-#define ALF_CHECK_STREQ(str0, str1, ...)									\
+#define ALF_CHECK_STR_EQ(str0, str1, ...)									\
 	alfCheckStrEq(															\
 		_state_internal_, str0, str1, #str0, #str1, __FILENAME__, __LINE__,	\
 		(AlfTestCheckParameters){ ._u = 0, __VA_ARGS__ }					\

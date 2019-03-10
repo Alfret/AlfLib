@@ -79,17 +79,17 @@ ALF_TEST(insert, utf8)
 
 	// Insert
 	char* output0 = alfUTF8Insert(input0, 3, 0, u8"ads");
-	ALF_CHECK_STREQ(output0, u8"månadsdag",
+	ALF_CHECK_STR_EQ(output0, u8"månadsdag",
 		"Add letters in word, no delete");
 
 	// Delete
 	char* output1 = alfUTF8Insert(input0, 3, 3, u8"");
-	ALF_CHECK_STREQ(output1, u8"mån",
+	ALF_CHECK_STR_EQ(output1, u8"mån",
 		"Only delete letters, no adding");
 
 	// Replace
 	char* output2 = alfUTF8Insert(input0, 0, 3, u8"annan");
-	ALF_CHECK_STREQ(output2, u8"annandag",
+	ALF_CHECK_STR_EQ(output2, u8"annandag",
 		"Replace letters, delete some and add some");
 }
 
@@ -102,33 +102,33 @@ ALF_TEST(substring, utf8)
 
 	// Check strings that starts at beginning
 	char* output0 = alfUTF8Substring(input0, 0, 0); // Empty word
-	ALF_CHECK_STREQ(output0, u8"",
+	ALF_CHECK_STR_EQ(output0, u8"",
 		"Empty substring at beginning of string");
 	char* output1 = alfUTF8Substring(input0, 0, 1); // First letter
-	ALF_CHECK_STREQ(output1, u8"m",
+	ALF_CHECK_STR_EQ(output1, u8"m",
 		"First letter at beginning of string");
 	char* output2 = alfUTF8Substring(input0, 0, 2); // First 2 letters
-	ALF_CHECK_STREQ(output2, u8"må",
+	ALF_CHECK_STR_EQ(output2, u8"må",
 		"First two letters at beginning of string");
 	char* output3 = alfUTF8Substring(input0, 0, 5); // All except 1 letter
-	ALF_CHECK_STREQ(output3, u8"månda",
+	ALF_CHECK_STR_EQ(output3, u8"månda",
 		"Entire string expect last letter");
 	char* output4 = alfUTF8Substring(input0, 0, 6); // All
-	ALF_CHECK_STREQ(output4, u8"måndag",
+	ALF_CHECK_STR_EQ(output4, u8"måndag",
 		"Entire string");
 
 	// Check strings that ends at the end
 	char* output5 = alfUTF8Substring(input0, 5, 0); // Empty word
-	ALF_CHECK_STREQ(output5, u8"",
+	ALF_CHECK_STR_EQ(output5, u8"",
 		"Empty substring at beginning of string");
 	char* output6 = alfUTF8Substring(input0, 5, 1); // First letter
-	ALF_CHECK_STREQ(output6, u8"g",
+	ALF_CHECK_STR_EQ(output6, u8"g",
 		"First letter at beginning of string");
 	char* output7 = alfUTF8Substring(input0, 4, 2); // First 2 letters
-	ALF_CHECK_STREQ(output7, u8"ag",
+	ALF_CHECK_STR_EQ(output7, u8"ag",
 		"First two letters at beginning of string");
 	char* output8 = alfUTF8Substring(input0, 1, 5); // All except 1 letter
-	ALF_CHECK_STREQ(output8, u8"åndag",
+	ALF_CHECK_STR_EQ(output8, u8"åndag",
 		"Entire string expect last letter");
 
 	// Invalid index
