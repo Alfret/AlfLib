@@ -72,6 +72,30 @@ uint32_t numbers0through79[] = {
 // Unicode Tests
 // ========================================================================== //
 
+ALF_TEST(length, utf8)
+{
+	ALF_CHECK_TRUE(alfUTF8StringLength(u8"") == 0);
+	ALF_CHECK_TRUE(alfUTF8StringLength(u8"a") == 1);
+	ALF_CHECK_TRUE(alfUTF8StringLength(u8"ö") == 1);
+	ALF_CHECK_TRUE(alfUTF8StringLength(u8"åäö") == 3);
+	ALF_CHECK_TRUE(alfUTF8StringLength(u8"aö") == 2);
+	ALF_CHECK_TRUE(alfUTF8StringLength(u8"öa") == 2);
+	ALF_CHECK_TRUE(alfUTF8StringLength(NULL) == 0,
+		"NULL strings have a length of 0");
+}
+
+// -------------------------------------------------------------------------- //
+
+ALF_TEST(codepoint_width, utf8)
+{
+	ALF_CHECK_TRUE(alfUTF8CodepointWidth('a') == 1);
+	ALF_CHECK_TRUE(alfUTF8CodepointWidth(246) == 2); // ö
+	ALF_CHECK_TRUE(alfUTF8CodepointWidth(24328) == 3); // 弈
+	ALF_CHECK_TRUE(alfUTF8CodepointWidth(129300) == 4); // 🤔
+}
+
+// -------------------------------------------------------------------------- //
+
 ALF_TEST(insert, utf8)
 {
 	// Setup input strings
@@ -82,14 +106,38 @@ ALF_TEST(insert, utf8)
 	ALF_CHECK_STR_EQ(output0, u8"månadsdag",
 		"Add letters in word, no delete");
 
+	char* output1 = alfUTF8Insert(u8"", 0, 0, u8"månad");
+	ALF_CHECK_STR_EQ(output1, u8"månad",
+		"Insert into empty string");
+}
+
+// -------------------------------------------------------------------------- //
+
+ALF_TEST(delete, utf8)
+{
+	// Setup input strings
+	const char* input0 = u8"måndag";
+
 	// Delete
-	char* output1 = alfUTF8Insert(input0, 3, 3, u8"");
-	ALF_CHECK_STR_EQ(output1, u8"mån",
+	char* output0 = alfUTF8Insert(input0, 3, 3, u8"");
+	ALF_CHECK_STR_EQ(output0, u8"mån",
 		"Only delete letters, no adding");
 
+	char* output1 = alfUTF8Insert(u8"", 0, 0, u8"");
+	ALF_CHECK_STR_EQ(output0, u8"mån",
+		"Only delete letters, no adding");
+}
+
+// -------------------------------------------------------------------------- //
+
+ALF_TEST(replace, utf8)
+{
+	// Setup input strings
+	const char* input0 = u8"måndag";
+
 	// Replace
-	char* output2 = alfUTF8Insert(input0, 0, 3, u8"annan");
-	ALF_CHECK_STR_EQ(output2, u8"annandag",
+	char* output0 = alfUTF8Insert(input0, 0, 3, u8"annan");
+	ALF_CHECK_STR_EQ(output0, u8"annandag",
 		"Replace letters, delete some and add some");
 }
 
@@ -302,11 +350,15 @@ int main()
 
 	// Setup suite: Unicode
 	AlfTest testsUnicode[] = {
+		ALF_TEST_LISTING(length, utf8),
+		ALF_TEST_LISTING(codepoint_width, utf8),
 		ALF_TEST_LISTING(insert, utf8),
+		ALF_TEST_LISTING(delete, utf8),
+		ALF_TEST_LISTING(replace, utf8),
 		ALF_TEST_LISTING(substring, utf8)
 	};
 	AlfTestSuite* suiteUnicode =
-		alfCreateTestSuite("Unicode", testsUnicode, 2);
+		alfCreateTestSuite("Unicode", testsUnicode, 6);
 
 	// Setup suite: Thread
 	AlfTest testsThread[] = {

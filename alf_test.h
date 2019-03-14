@@ -356,6 +356,12 @@ typedef struct AlfTestData
 
 // -------------------------------------------------------------------------- //
 
+/** Check that condition is true. Alias for the longer version 
+ * ALF_CHECK_TRUE **/
+#define ALF_CHECK(condition, ...) ALF_CHECK_TRUE(condition, (__VA_ARGS__))
+
+// -------------------------------------------------------------------------- //
+
 /** Check that condition is false **/
 #define ALF_CHECK_FALSE(condition, ...)										\
 	alfCheckFalse(															\
