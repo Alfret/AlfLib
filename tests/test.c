@@ -100,17 +100,17 @@ ALF_TEST(codepoint_width, utf8)
 
 ALF_TEST(insert, utf8)
 {
-	// Setup input strings
-	const char* input0 = "måndag";
-
 	// Insert
-	char* output0 = alfUTF8Insert(input0, 3, 0, "ads");
+	char* output0 = alfUTF8Insert("måndag", 3, 0, "ads");
 	ALF_CHECK_STR_EQ(output0, "månadsdag",
 		"Add letters in word, no delete");
 
 	char* output1 = alfUTF8Insert("", 0, 0, "månad");
 	ALF_CHECK_STR_EQ(output1, "månad",
 		"Insert into empty string");
+
+	char* output2 = alfUTF8Insert("T", 1, 0, "h");
+	ALF_CHECK_STR_EQ(output2, "Th");
 }
 
 // -------------------------------------------------------------------------- //
