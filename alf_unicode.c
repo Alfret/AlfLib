@@ -482,6 +482,8 @@ AlfChar8* alfUTF8Insert(
 		if (index == from + count) { endOffset = offset; }
 	}
 
+	if (endOffset < startOffset) { return NULL; }
+
 	const uint64_t insertSize = alfStringSize(insertion);
 	const uint64_t beforeSize = startOffset;
 	const uint64_t afterSize = offset - endOffset;
