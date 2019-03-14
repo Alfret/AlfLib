@@ -66,7 +66,7 @@ uint32_t alfStringSize(const AlfChar8* string)
  * is expected to be valid. Validity is not checked by this function **/
 uint32_t alfUTF8CodepointWidthFromFirstByte(uint8_t c)
 {
-	return c <= 0x7F ? 1 : c <= 0x7FF ? 2 : c <= 0xFFFF ? 3 : 4;
+	return c < 0xC0 ? 1 : c < 0xE0 ? 2 : c < 0xF0 ? 3 : 4;
 }
 
 // ========================================================================== //
@@ -263,7 +263,7 @@ uint64_t alfUTF8StringLength(const AlfChar8* string)
 		offset += alfUTF8CodepointWidthFromFirstByte(c);
 		length++;
 	}
-	return length - 1;
+	return length;
 }
 
 // -------------------------------------------------------------------------- //
@@ -481,8 +481,6 @@ AlfChar8* alfUTF8Insert(
 		if (index == from) { startOffset = offset; }
 		if (index == from + count) { endOffset = offset; }
 	}
-
-	if (endOffset == 0) { return NULL; }
 
 	const uint64_t insertSize = alfStringSize(insertion);
 	const uint64_t beforeSize = startOffset;
@@ -725,7 +723,7 @@ uint64_t alfUTF16StringLength(const AlfChar16* string)
 		offset += alfUTF16CodepointWidthFromFirstByte(c);
 		length++;
 	}
-	return length - 1;
+	return length;
 }
 
 // -------------------------------------------------------------------------- //
