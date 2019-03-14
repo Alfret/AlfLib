@@ -1,4 +1,4 @@
-﻿// MIT License
+// MIT License
 //
 // Copyright (c) 2018-2019 Filip Björklund
 //
@@ -74,12 +74,12 @@ uint32_t numbers0through79[] = {
 
 ALF_TEST(length, utf8)
 {
-	ALF_CHECK_TRUE(alfUTF8StringLength(u8"") == 0);
-	ALF_CHECK_TRUE(alfUTF8StringLength(u8"a") == 1);
-	ALF_CHECK_TRUE(alfUTF8StringLength(u8"ö") == 1);
-	ALF_CHECK_TRUE(alfUTF8StringLength(u8"åäö") == 3);
-	ALF_CHECK_TRUE(alfUTF8StringLength(u8"aö") == 2);
-	ALF_CHECK_TRUE(alfUTF8StringLength(u8"öa") == 2);
+	ALF_CHECK_TRUE(alfUTF8StringLength("") == 0);
+	ALF_CHECK_TRUE(alfUTF8StringLength("a") == 1);
+	ALF_CHECK_TRUE(alfUTF8StringLength("ö") == 1);
+	ALF_CHECK_TRUE(alfUTF8StringLength("åäö") == 3);
+	ALF_CHECK_TRUE(alfUTF8StringLength("aö") == 2);
+	ALF_CHECK_TRUE(alfUTF8StringLength("öa") == 2);
 	ALF_CHECK_TRUE(alfUTF8StringLength(NULL) == 0,
 		"NULL strings have a length of 0");
 }
@@ -96,18 +96,20 @@ ALF_TEST(codepoint_width, utf8)
 
 // -------------------------------------------------------------------------- //
 
+// -------------------------------------------------------------------------- //
+
 ALF_TEST(insert, utf8)
 {
 	// Setup input strings
-	const char* input0 = u8"måndag";
+	const char* input0 = "måndag";
 
 	// Insert
-	char* output0 = alfUTF8Insert(input0, 3, 0, u8"ads");
-	ALF_CHECK_STR_EQ(output0, u8"månadsdag",
+	char* output0 = alfUTF8Insert(input0, 3, 0, "ads");
+	ALF_CHECK_STR_EQ(output0, "månadsdag",
 		"Add letters in word, no delete");
 
-	char* output1 = alfUTF8Insert(u8"", 0, 0, u8"månad");
-	ALF_CHECK_STR_EQ(output1, u8"månad",
+	char* output1 = alfUTF8Insert("", 0, 0, "månad");
+	ALF_CHECK_STR_EQ(output1, "månad",
 		"Insert into empty string");
 }
 
@@ -116,15 +118,15 @@ ALF_TEST(insert, utf8)
 ALF_TEST(delete, utf8)
 {
 	// Setup input strings
-	const char* input0 = u8"måndag";
+	const char* input0 = "måndag";
 
 	// Delete
-	char* output0 = alfUTF8Insert(input0, 3, 3, u8"");
-	ALF_CHECK_STR_EQ(output0, u8"mån",
+	char* output0 = alfUTF8Insert(input0, 3, 3, "");
+	ALF_CHECK_STR_EQ(output0, "mån",
 		"Only delete letters, no adding");
 
-	char* output1 = alfUTF8Insert(u8"", 0, 0, u8"");
-	ALF_CHECK_STR_EQ(output0, u8"mån",
+	char* output1 = alfUTF8Insert("", 0, 0, "");
+	ALF_CHECK_STR_EQ(output0, "mån",
 		"Only delete letters, no adding");
 }
 
@@ -133,11 +135,11 @@ ALF_TEST(delete, utf8)
 ALF_TEST(replace, utf8)
 {
 	// Setup input strings
-	const char* input0 = u8"måndag";
+	const char* input0 = "måndag";
 
 	// Replace
-	char* output0 = alfUTF8Insert(input0, 0, 3, u8"annan");
-	ALF_CHECK_STR_EQ(output0, u8"annandag",
+	char* output0 = alfUTF8Insert(input0, 0, 3, "annan");
+	ALF_CHECK_STR_EQ(output0, "annandag",
 		"Replace letters, delete some and add some");
 }
 
@@ -146,37 +148,37 @@ ALF_TEST(replace, utf8)
 ALF_TEST(substring, utf8)
 {
 	// Setup input strings
-	const char* input0 = u8"måndag";
+	const char* input0 = "måndag";
 
 	// Check strings that starts at beginning
 	char* output0 = alfUTF8Substring(input0, 0, 0); // Empty word
-	ALF_CHECK_STR_EQ(output0, u8"",
+	ALF_CHECK_STR_EQ(output0, "",
 		"Empty substring at beginning of string");
 	char* output1 = alfUTF8Substring(input0, 0, 1); // First letter
-	ALF_CHECK_STR_EQ(output1, u8"m",
+	ALF_CHECK_STR_EQ(output1, "m",
 		"First letter at beginning of string");
 	char* output2 = alfUTF8Substring(input0, 0, 2); // First 2 letters
-	ALF_CHECK_STR_EQ(output2, u8"må",
+	ALF_CHECK_STR_EQ(output2, "må",
 		"First two letters at beginning of string");
 	char* output3 = alfUTF8Substring(input0, 0, 5); // All except 1 letter
-	ALF_CHECK_STR_EQ(output3, u8"månda",
+	ALF_CHECK_STR_EQ(output3, "månda",
 		"Entire string expect last letter");
 	char* output4 = alfUTF8Substring(input0, 0, 6); // All
-	ALF_CHECK_STR_EQ(output4, u8"måndag",
+	ALF_CHECK_STR_EQ(output4, "måndag",
 		"Entire string");
 
 	// Check strings that ends at the end
 	char* output5 = alfUTF8Substring(input0, 5, 0); // Empty word
-	ALF_CHECK_STR_EQ(output5, u8"",
+	ALF_CHECK_STR_EQ(output5, "",
 		"Empty substring at beginning of string");
 	char* output6 = alfUTF8Substring(input0, 5, 1); // First letter
-	ALF_CHECK_STR_EQ(output6, u8"g",
+	ALF_CHECK_STR_EQ(output6, "g",
 		"First letter at beginning of string");
 	char* output7 = alfUTF8Substring(input0, 4, 2); // First 2 letters
-	ALF_CHECK_STR_EQ(output7, u8"ag",
+	ALF_CHECK_STR_EQ(output7, "ag",
 		"First two letters at beginning of string");
 	char* output8 = alfUTF8Substring(input0, 1, 5); // All except 1 letter
-	ALF_CHECK_STR_EQ(output8, u8"åndag",
+	ALF_CHECK_STR_EQ(output8, "åndag",
 		"Entire string expect last letter");
 
 	// Invalid index
@@ -186,6 +188,38 @@ ALF_TEST(substring, utf8)
 	// Invalid count
 	char* output10 = alfUTF8Substring(input0, 0, 100);
 	ALF_CHECK_NULL(output10, "From beginning, count of 100");
+}
+
+// -------------------------------------------------------------------------- //
+
+ALF_TEST(from_codepoint_list, utf8)
+{
+	// Normal list
+	uint32_t input0[] = { 67, 246 };
+	char buffer0[10];
+	uint32_t size0 = 10;
+	AlfBool success = alfUTF8FromCodepointList(input0, 2, &size0, buffer0);
+	ALF_CHECK(success, "Encoding normal codepoint list should be correct");
+	ALF_CHECK_STR_EQ("Cö", buffer0)
+
+	// Check empty list
+	uint32_t input1[] = { 0 };
+	char buffer1[10];
+	uint32_t size1 = 10;
+	success = alfUTF8FromCodepointList(input1, 0, &size1, buffer1);
+	ALF_CHECK(success, "Encoding empty codepoint list should be correct");
+	ALF_CHECK_STR_EQ("", buffer1)
+
+	// Check complex list
+	uint32_t input2[] = { 67, 24328, 75, 97, 128526, 128516, 103, 246, 97 };
+	uint32_t size2;
+	success = alfUTF8FromCodepointList(input2, 9, &size2, NULL);
+	ALF_CHECK(success, "Checking the number of bytes needed to encoding UTF-8 "
+		"from codepoint list should work");
+	char* buffer2 = malloc(size2);
+	success = alfUTF8FromCodepointList(input2, 9, &size2, buffer2);
+	ALF_CHECK(success, "Encoding complex codepoint list should be correct");
+	ALF_CHECK_STR_EQ("C弈Ka😎😄göa", buffer2)
 }
 
 // ========================================================================== //
@@ -355,10 +389,11 @@ int main()
 		ALF_TEST_LISTING(insert, utf8),
 		ALF_TEST_LISTING(delete, utf8),
 		ALF_TEST_LISTING(replace, utf8),
-		ALF_TEST_LISTING(substring, utf8)
+		ALF_TEST_LISTING(substring, utf8),
+		ALF_TEST_LISTING(from_codepoint_list, utf8)
 	};
 	AlfTestSuite* suiteUnicode =
-		alfCreateTestSuite("Unicode", testsUnicode, 6);
+		alfCreateTestSuite("Unicode", testsUnicode, 7);
 
 	// Setup suite: Thread
 	AlfTest testsThread[] = {
