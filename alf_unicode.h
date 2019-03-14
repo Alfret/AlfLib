@@ -538,6 +538,14 @@ AlfBool alfUTF8ToUTF16(
 	uint32_t* numCodeUnits,
 	AlfChar16* buffer);
 
+// -------------------------------------------------------------------------- //
+
+AlfBool alfUTF8FromCodepointList(
+	const uint32_t* codepoints,
+	uint32_t count,
+	uint32_t* numBytes,
+	AlfChar8* buffer);
+
 // ========================================================================== //
 // End of Header
 // ========================================================================== //

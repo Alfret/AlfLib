@@ -146,7 +146,7 @@ AlfBool alfUTF8Encode(
 	uint32_t* numBytes)
 {
 	const uint32_t _numBytes = alfUTF8CodepointWidth(codepoint);
-	*numBytes = _numBytes;
+	if (numBytes) { *numBytes = _numBytes; }
 
 	// Encode in 1 byte
 	if (_numBytes == 1)
@@ -899,5 +899,49 @@ AlfBool alfUTF8ToUTF16(
 		}
 	}
 	*numCodeUnits = _numCodeUnits;
+	return ALF_TRUE;
+}
+
+// -------------------------------------------------------------------------- //
+
+AlfBool alfUTF8FromCodepointList(
+	const uint32_t* codepoints, 
+	uint32_t count,
+	uint32_t* numBytes,
+	AlfChar8* buffer)
+{
+	// Only calculate size of buffer is NULL
+	if (!buffer)
+	{
+		uint32_t accumulator = 1; // space for nul-terminator
+		for (uint32_t i = 0; i < count; i++)
+		{
+			accumulator += alfUTF8CodepointWidth(codepoints[i]);
+		}
+		*numBytes = accumulator;
+		return ALF_TRUE;
+	}
+
+	// Otherwise encode into buffer
+	uint64_t offset = 0;
+	uint32_t index = 0;
+	for (uint32_t i = 0; i < count; i++)
+	{
+		// Check that buffer can hold the encoded codepoint
+		const uint32_t codepointWidth = alfUTF8CodepointWidth(codepoints[i]);
+		if (offset + codepointWidth > *numBytes)
+		{
+			return ALF_FALSE;
+		}
+
+		// Encode codepoint
+		AlfBool success = alfUTF8Encode(buffer, offset, codepoints[i], NULL);
+
+		offset += codepointWidth;
+		index++;
+	}
+
+	// Add nul-terminator
+	buffer[offset] = 0;
 	return ALF_TRUE;
 }
