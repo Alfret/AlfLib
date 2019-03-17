@@ -348,7 +348,7 @@ typedef struct AlfTestData
 
 /** Check that condition is true. Alias for the longer version 
  * ALF_CHECK_TRUE **/
-#define ALF_CHECK(condition, ...) ALF_CHECK_TRUE(condition, (__VA_ARGS__))
+#define ALF_CHECK(condition, ...) ALF_CHECK_TRUE(condition, ##__VA_ARGS__)
 
 // -------------------------------------------------------------------------- //
 
@@ -414,6 +414,15 @@ typedef struct AlfTestData
 		__FILENAME__, __LINE__,												\
 		(AlfTestCheckParameters){ __VA_ARGS__ }								\
 	);
+
+// ========================================================================== //
+// Catch2 Interop
+// ========================================================================== //
+
+#if defined(ALF_TEST_CATCH2_INTEROP)
+#define TEST_CASE(name, group) ALF_TEST(name, group)
+#define CHECK(condition, ...) ALF_CHECK_TRUE(condition, ##__VA_ARGS__)
+#endif
 
 // ========================================================================== //
 // Functions

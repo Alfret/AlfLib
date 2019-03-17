@@ -28,16 +28,11 @@
 #include <string.h>
 
 // Alf headers
+#define ALF_TEST_CATCH2_INTEROP
 #include "alf_test.h"
 #include "alf_unicode.h"
 #include "alf_thread.h"
 #include "alf_collection.h"
-
-// ========================================================================== //
-// Main Function
-// ========================================================================== //
-
-ALF_TEST_MAIN()
 
 // ========================================================================== //
 // Local Testing Data
@@ -75,27 +70,25 @@ uint32_t numbers0through79[] = {
 };
 
 // ========================================================================== //
+// Main Function
+// ========================================================================== //
+
+ALF_TEST_MAIN()
+
+// ========================================================================== //
 // Unicode Tests
 // ========================================================================== //
 
-
-ALF_TEST("Length", "[UTF-8]")
+TEST_CASE("Length", "[UTF-8]")
 {
-	ALF_CHECK_TRUE(alfUTF8StringLength("") == 0);
-	ALF_CHECK_TRUE(alfUTF8StringLength("a") == 1);
-	ALF_CHECK_TRUE(alfUTF8StringLength("ö") == 1);
-	ALF_CHECK_TRUE(alfUTF8StringLength("åäö") == 3);
-	ALF_CHECK_TRUE(alfUTF8StringLength("aö") == 2);
-	ALF_CHECK_TRUE(alfUTF8StringLength("öa") == 2);
-	ALF_CHECK_TRUE(alfUTF8StringLength(NULL) == 0,
+	CHECK(alfUTF8StringLength("") == 0);
+	CHECK(alfUTF8StringLength("a") == 1);
+	CHECK(alfUTF8StringLength("ö") == 1);
+	CHECK(alfUTF8StringLength("åäö") == 3);
+	CHECK(alfUTF8StringLength("aö") == 2);
+	CHECK(alfUTF8StringLength("öa") == 2);
+	CHECK(alfUTF8StringLength(NULL) == 0,
 		"NULL strings have a length of 0");
-}
-
-void fun()
-{
-	__COUNTER__;
-	__COUNTER__;
-	__COUNTER__;
 }
 
 // -------------------------------------------------------------------------- //
@@ -138,7 +131,7 @@ ALF_TEST("Delete", "[UTF-8]")
 		"Only delete letters, no adding");
 
 	char* output1 = alfUTF8Insert("", 0, 0, "");
-	ALF_CHECK_STR_EQ(output0, "mån",
+	ALF_CHECK_STR_EQ(output1, "",
 		"Only delete letters, no adding");
 }
 
