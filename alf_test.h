@@ -178,7 +178,6 @@ extern "C" {
 // Forward Declarations
 // ====================================================================== //
 	
-typedef struct tag_AlfTestSuite AlfTestSuite;
 typedef struct tag_AlfTestState AlfTestState;
 	
 // ========================================================================== //
@@ -187,16 +186,6 @@ typedef struct tag_AlfTestState AlfTestState;
 
 /** Test function **/
 typedef void(*PFN_AlfTest)(AlfTestState* state);
-
-// -------------------------------------------------------------------------- //
-
-/** Suite setup function **/
-typedef void(*PFN_AlfSuiteSetup)(AlfTestSuite* suite);
-
-// -------------------------------------------------------------------------- //
-
-/** Suite teardown function **/
-typedef PFN_AlfSuiteSetup PFN_AlfSuiteTeardown;
 
 // ========================================================================== //
 // Macro declarations
@@ -224,11 +213,15 @@ typedef PFN_AlfSuiteSetup PFN_AlfSuiteTeardown;
 
 /** Boolean type **/
 typedef unsigned long AlfTestBool;
+// -------------------------------------------------------------------------- //
+
+/** Standard integer type **/
+typedef unsigned char AlfTestByte;
 
 // -------------------------------------------------------------------------- //
 
 /** Standard integer type **/
-typedef unsigned long AlfTestInt;
+typedef unsigned int AlfTestInt;
 
 // -------------------------------------------------------------------------- //
 
@@ -244,17 +237,6 @@ typedef unsigned long long AlfTestTime;
 // Structures
 // ========================================================================== //
 
-/** \struct AlfTestSuite
- * \author Filip Björklund
- * \date 29 september 2018 - 13:35
- * \brief Test suite.
- * \details
- * Represents a test suite which is a collection of tests.
- */
-typedef struct tag_AlfTestSuite AlfTestSuite;
-
-// -------------------------------------------------------------------------- //
-
 /** \struct AlfTestState
  * \author Filip Björklund
  * \date 29 september 2018 - 13:35
@@ -264,23 +246,6 @@ typedef struct tag_AlfTestSuite AlfTestSuite;
  * of each test function.
  */
 typedef struct tag_AlfTestState AlfTestState;
-
-// -------------------------------------------------------------------------- //
-
-/** \struct AlfTest
- * \author Filip Björklund
- * \date 29 september 2018 - 13:44
- * \brief Test.
- * \details
- * Represents a single test to be run as part of a test suite.
- */
-typedef struct AlfTest
-{
-	/** Name of test **/
-	const char* name;
-	/** Test function **/
-	PFN_AlfTest TestFunction;
-} AlfTest;
 
 // -------------------------------------------------------------------------- //
 
@@ -312,15 +277,36 @@ typedef struct AlfTestData
 {
 	/** Name of the test **/
 	const char* testName;
-	/** Line where test is defined **/
-	AlfTestInt testLine;
-	/** Test function **/
-	PFN_AlfTest testFunc;
+	/** Test group name **/
+	const char* groupName;
 } AlfTestData;
 
 // ========================================================================== //
 // Macros for testing
 // ========================================================================== //
+
+/** Macro for providing a main function that runs the tests **/
+#define ALF_TEST_MAIN()	\
+	int main() { return alfTestRun(); }
+
+// -------------------------------------------------------------------------- //
+
+#if defined(_WIN32)
+/** Macro for exporting function **/
+#	define ALF_TEST_EXPORT __declspec(dllexport)
+#else
+#	define ALF_TEST_EXPORT
+#endif
+
+/** Macro to concatenate 'a' and 'b' (Auxilliary) **/
+#define ALF_TEST_CONCAT_(a, b) a ## b
+
+// -------------------------------------------------------------------------- //
+
+/** Macro to concatenate 'a' and 'b' **/
+#define ALF_TEST_CONCAT(a, b) ALF_TEST_CONCAT_(a, b)
+
+// -------------------------------------------------------------------------- //
 
 /** Macro for generating a name for a test **/
 #define ALF_TEST_NAME(name, group) _alf_test_ ## name ## _ ## group ## _
@@ -340,10 +326,14 @@ typedef struct AlfTestData
 
 /** Macro for defining a test **/
 #define ALF_TEST(name, group)												\
-	void ALF_TEST_NAME(name, group) (AlfTestState* _state_internal_);		\
-	static AlfTestData ALF_TEST_DATA_NAME(name, group) =					\
-		{ #group "_" #name, __LINE__ + 1, ALF_TEST_NAME(name, group) };		\
-	void ALF_TEST_NAME(name, group) (AlfTestState* _state_internal_)
+	ALF_TEST_EXPORT void ALF_TEST_CONCAT(_alf_test_get_data_, __COUNTER__)	\
+		(AlfTestData* data)													\
+	{																		\
+		data->testName = name;												\
+		data->groupName = group;											\
+	}																		\
+	ALF_TEST_EXPORT void ALF_TEST_CONCAT(_alf_test_, __COUNTER__)			\
+		(AlfTestState* _state_internal_)
 
 // -------------------------------------------------------------------------- //
 
@@ -429,113 +419,12 @@ typedef struct AlfTestData
 // Functions
 // ========================================================================== //
 
-/** Create a test suite with a specified set of tests.
- * \brief Create test suite.
- * \note No transfer of ownership of dynamic resources is done. It's therefore
- * up to the user to free any data that it has allocated.
- * \param name Name of the test suite.
- * \param tests Tests that belong to suite.
- * \param count Number of tests.
- * \return Created test suite.
- */
-AlfTestSuite* alfCreateTestSuite(char* name, AlfTest* tests, AlfTestInt count);
+AlfTestInt alfTestRun();
 
-// -------------------------------------------------------------------------- //
+// ========================================================================== //
+// Check Functions
+// ========================================================================== //
 
-/** Delete a test suite that was previously created with alfCreateTestSuite.
- * \brief Delete test suite.
- * \param suite Test suite to delete.
- */
-void alfDestroyTestSuite(AlfTestSuite* suite);
-
-// -------------------------------------------------------------------------- //
-
-/** Run all the tests of a single test suite.
- * \brief Run test suite.
- * \param suite Suite to run.
- * \return Number of failed tests.
- */
-AlfTestInt alfRunSuite(AlfTestSuite* suite);
-
-// -------------------------------------------------------------------------- //
-
-/** Run all the tests for a set of suites. The test are run in the order 
- * specified and a summary is displayed to the user.
- * \brief Run a set of test suites.
- * \param suites Suites to run.
- * \param suiteCount Number of suites.
- * \return Number of failed checks in total in all tests.
- */
-AlfTestInt alfRunSuites(AlfTestSuite** suites, AlfTestInt suiteCount);
-
-// -------------------------------------------------------------------------- //
-
-/** Set the user data of a test suite. This can contain any type of data that 
- * the user might want to access during a test.
- * \brief Set suite user data.
- * \param suite Suite to set user data for.
- * \param data User data to set.
- */
-void alfSetSuiteUserData(AlfTestSuite* suite, void* data);
-
-// -------------------------------------------------------------------------- //
-
-/** Returns the user data of a test suite.
- * \brief Returns test suite user data.
- * \param suite Suite to return user data of.
- * \return User data. NULL if no data has been set.
- */
-void* alfGetSuiteUserData(AlfTestSuite* suite);
-
-// -------------------------------------------------------------------------- //
-
-/** Returns the user data of a test suite from a test state.
- * \brief Returns test suite user data from state.
- * \param state State to retrieve suite user data from.
- * \return User data. NULL if no data has been set.
- */
-void* alfGetSuiteUserDataFromState(AlfTestState* state);
-
-// -------------------------------------------------------------------------- //
-
-/** Set the callback that will be called for a suite to setup. This is called 
- * before the suite is run.
- * \note By default a blank function is called for setup.
- * \brief Set suite setup callback.
- * \param suite Suite to set callback for.
- * \param callback Callback to set.
- */
-void alfSetSuiteSetupCallback(AlfTestSuite* suite, PFN_AlfSuiteSetup callback);
-
-// -------------------------------------------------------------------------- //
-
-/** Set the callback that will be called for a suite to teardown. This is called
- * after all the tests of the suite has run.
- * \brief Set suite teardowns callback.
- * \param suite Suite to set callback for.
- * \param callback Callback to set.
- */
-void alfSetSuiteTeardownCallback(
-	AlfTestSuite* suite, 
-	PFN_AlfSuiteTeardown callback);
-
-// -------------------------------------------------------------------------- //
-
-/** Clear the setup callback for a suite.
- * \brief Clear suite setup callback.
- * \param suite Suite to clear callback for.
- */
-void alfClearSuiteSetupCallback(AlfTestSuite* suite);
-
-// -------------------------------------------------------------------------- //
-
-/** Clear the teardown callback for a suite.
- * \brief Clear suite teardown callback.
- * \param suite Suite to clear callback for.
- */
-void alfClearSuiteTeardownCallback(AlfTestSuite* suite);
-
-// -------------------------------------------------------------------------- //
 
 /** Function to do a check (assertion) during a test. This should however not be
  * used directly. Instead use the check macros.

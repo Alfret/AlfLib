@@ -34,6 +34,12 @@
 #include "alf_collection.h"
 
 // ========================================================================== //
+// Main Function
+// ========================================================================== //
+
+ALF_TEST_MAIN()
+
+// ========================================================================== //
 // Local Testing Data
 // ========================================================================== //
 
@@ -72,7 +78,8 @@ uint32_t numbers0through79[] = {
 // Unicode Tests
 // ========================================================================== //
 
-ALF_TEST(length, utf8)
+
+ALF_TEST("Length", "[UTF-8]")
 {
 	ALF_CHECK_TRUE(alfUTF8StringLength("") == 0);
 	ALF_CHECK_TRUE(alfUTF8StringLength("a") == 1);
@@ -84,9 +91,16 @@ ALF_TEST(length, utf8)
 		"NULL strings have a length of 0");
 }
 
+void fun()
+{
+	__COUNTER__;
+	__COUNTER__;
+	__COUNTER__;
+}
+
 // -------------------------------------------------------------------------- //
 
-ALF_TEST(codepoint_width, utf8)
+ALF_TEST("Codepoint Width", "[UTF-8]")
 {
 	ALF_CHECK_TRUE(alfUTF8CodepointWidth('a') == 1);
 	ALF_CHECK_TRUE(alfUTF8CodepointWidth(246) == 2); // ö
@@ -96,9 +110,7 @@ ALF_TEST(codepoint_width, utf8)
 
 // -------------------------------------------------------------------------- //
 
-// -------------------------------------------------------------------------- //
-
-ALF_TEST(insert, utf8)
+ALF_TEST("Insert", "[UTF-8]")
 {
 	// Insert
 	char* output0 = alfUTF8Insert("måndag", 3, 0, "ads");
@@ -115,7 +127,7 @@ ALF_TEST(insert, utf8)
 
 // -------------------------------------------------------------------------- //
 
-ALF_TEST(delete, utf8)
+ALF_TEST("Delete", "[UTF-8]")
 {
 	// Setup input strings
 	const char* input0 = "måndag";
@@ -130,9 +142,10 @@ ALF_TEST(delete, utf8)
 		"Only delete letters, no adding");
 }
 
+
 // -------------------------------------------------------------------------- //
 
-ALF_TEST(replace, utf8)
+ALF_TEST("Replace", "[UTF-8]")
 {
 	// Setup input strings
 	const char* input0 = "måndag";
@@ -145,7 +158,7 @@ ALF_TEST(replace, utf8)
 
 // -------------------------------------------------------------------------- //
 
-ALF_TEST(substring, utf8)
+ALF_TEST("Substring", "[UTF-8]")
 {
 	// Setup input strings
 	const char* input0 = "måndag";
@@ -192,7 +205,7 @@ ALF_TEST(substring, utf8)
 
 // -------------------------------------------------------------------------- //
 
-ALF_TEST(from_codepoint_list, utf8)
+ALF_TEST("From Codepoint List", "[UTF-8]")
 {
 	// Normal list
 	uint32_t input0[] = { 67, 246 };
@@ -223,54 +236,14 @@ ALF_TEST(from_codepoint_list, utf8)
 }
 
 // ========================================================================== //
-// Thread Tests
-// ========================================================================== //
-
-int32_t threadStartFunction0(void* args) { return (int32_t)(int64_t)args; }
-
-// -------------------------------------------------------------------------- //
-
-int32_t threadStartFunction1(void* args)
-{
-	return (int32_t)strlen(alfGetThreadName());
-}
-
-// -------------------------------------------------------------------------- //
-
-ALF_TEST(create, thread)
-{
-	// Make sure code is passed through
-	const int32_t code = 56;
-	AlfThread* thread = alfCreateThread(
-		(PFN_AlfThreadFunction)threadStartFunction0,
-		(void*)(int64_t)(code)
-	);
-	int32_t exitCode = alfJoinThread(thread);
-	ALF_CHECK_TRUE(exitCode == code,
-		"Exit code from thread should match input");
-
-	// Create named
-	const char* name = "test_thread";
-	thread = alfCreateThreadNamed(
-		(PFN_AlfThreadFunction)threadStartFunction1,
-		(void*)(int64_t)(code), 
-		name
-	);
-	exitCode = alfJoinThread(thread);
-	ALF_CHECK_TRUE(exitCode == strlen(name),
-		"Exit code from thread should match length of the name set for the "
-		"thread");
-}
-
-// ========================================================================== //
 // Collection Tests
 // ========================================================================== //
 
-ALF_TEST(create, hash_table)
+ALF_TEST("Create", "[Hash Table]")
 {
 	// Test insertion
 	AlfHashTable* table = alfCreateHashTableSimple(sizeof(uint32_t), NULL);
-	
+
 	// Check that count is correct
 	ALF_CHECK_TRUE(alfHashTableGetSize(table) == 0,
 		"Check that hash-table size is 0 after creation");
@@ -283,7 +256,7 @@ ALF_TEST(create, hash_table)
 
 // -------------------------------------------------------------------------- //
 
-ALF_TEST(insert, hash_table)
+ALF_TEST("Insert", "[Hash Table]")
 {
 	// Test insertion
 	AlfHashTable* table = alfCreateHashTableSimple(sizeof(uint32_t), NULL);
@@ -304,7 +277,7 @@ ALF_TEST(insert, hash_table)
 
 // -------------------------------------------------------------------------- //
 
-ALF_TEST(get, hash_table)
+ALF_TEST("Get", "[Hash Table]")
 {
 	// Create table and insert values for retrieval
 	AlfHashTable* table = alfCreateHashTableSimple(sizeof(uint32_t), NULL);
@@ -329,7 +302,7 @@ ALF_TEST(get, hash_table)
 
 // -------------------------------------------------------------------------- //
 
-ALF_TEST(remove, hash_table)
+ALF_TEST("Remove", "[Hash Table]")
 {
 	// Create table and insert values for retrieval
 	AlfHashTable* table = alfCreateHashTableSimple(sizeof(uint32_t), NULL);
@@ -370,60 +343,4 @@ ALF_TEST(remove, hash_table)
 
 	// Destroy table
 	alfDestroyHashTable(table);
-}
-
-// ========================================================================== //
-// Main Function
-// ========================================================================== //
-
-
-int main()
-{
-	// Startup
-	alfThreadStartup();
-
-	// Setup suite: Unicode
-	AlfTest testsUnicode[] = {
-		ALF_TEST_LISTING(length, utf8),
-		ALF_TEST_LISTING(codepoint_width, utf8),
-		ALF_TEST_LISTING(insert, utf8),
-		ALF_TEST_LISTING(delete, utf8),
-		ALF_TEST_LISTING(replace, utf8),
-		ALF_TEST_LISTING(substring, utf8),
-		ALF_TEST_LISTING(from_codepoint_list, utf8)
-	};
-	AlfTestSuite* suiteUnicode =
-		alfCreateTestSuite("Unicode", testsUnicode, 7);
-
-	// Setup suite: Thread
-	AlfTest testsThread[] = {
-		ALF_TEST_LISTING(create, thread)
-	};
-	AlfTestSuite* suiteThread =
-		alfCreateTestSuite("Thread", testsThread, 1);
-
-	// Setup suite: Collection
-	AlfTest testsCollection[] = {
-		ALF_TEST_LISTING(create, hash_table),
-		ALF_TEST_LISTING(insert, hash_table),
-		ALF_TEST_LISTING(get, hash_table),
-		ALF_TEST_LISTING(remove, hash_table)
-	};
-	AlfTestSuite* suiteCollection =
-		alfCreateTestSuite("Collection", testsCollection, 4);
-
-	// Run suites
-	AlfTestSuite* suites[] = {
-		suiteUnicode,
-		suiteThread,
-		suiteCollection
-	};
-	const int failures = (int)alfRunSuites(suites, 3);
-	alfDestroyTestSuite(suiteCollection);
-	alfDestroyTestSuite(suiteThread);
-	alfDestroyTestSuite(suiteUnicode);
-
-	// Shutdown
-	alfThreadShutdown();
-	return failures;
 }
