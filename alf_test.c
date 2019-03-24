@@ -285,7 +285,8 @@ static AlfTestTime alfTestTimer()
 
 /** Internal check function **/
 static void alfTestCheckInternal(
-	AlfTestState* state, 
+	AlfTestState* state,
+	AlfTestBool require,
 	AlfTestBool condition,
 	const char* message, 
 	const char* file, 
@@ -306,6 +307,11 @@ static void alfTestCheckInternal(
 		explanation ? explanation : "",
 		explanation ? "\"" : ""
 	);
+	if (!condition && require)
+	{
+		printf("Required test failed...");
+		exit(-1);
+	}
 }
 
 // -------------------------------------------------------------------------- //
@@ -663,8 +669,9 @@ AlfTestInt alfTestRun()
 
 void alfCheckTrue(
 	AlfTestState* state,
+	AlfTestBool require,
 	AlfTestBool predicate,
-	const char* predicateString,
+	const char predicateString[],
 	const char* file,
 	AlfTestInt line,
 	AlfTestCheckParameters parameters)
@@ -675,6 +682,7 @@ void alfCheckTrue(
 	);
 	alfTestCheckInternal(
 		state,
+		require,
 		predicate,
 		message,
 		file,
@@ -688,8 +696,9 @@ void alfCheckTrue(
 
 void alfCheckFalse(
 	AlfTestState* state,
+	AlfTestBool require,
 	AlfTestBool predicate,
-	const char* predicateString,
+	const char predicateString[],
 	const char* file,
 	AlfTestInt line,
 	AlfTestCheckParameters parameters)
@@ -700,6 +709,7 @@ void alfCheckFalse(
 	);
 	alfTestCheckInternal(
 		state,
+		require,
 		predicate,
 		message,
 		file,
@@ -713,8 +723,9 @@ void alfCheckFalse(
 
 void alfCheckNotNull(
 	AlfTestState* state,
+	AlfTestBool require,
 	void* pointer,
-	const char* pointerText,
+	const char pointerText[],
 	const char* file,
 	AlfTestInt line,
 	AlfTestCheckParameters parameters)
@@ -725,6 +736,7 @@ void alfCheckNotNull(
 	);
 	alfTestCheckInternal(
 		state,
+		require,
 		pointer != NULL,
 		message,
 		file,
@@ -738,8 +750,9 @@ void alfCheckNotNull(
 
 void alfCheckNull(
 	AlfTestState* state,
+	AlfTestBool require,
 	void* pointer,
-	const char* pointerText,
+	const char pointerText[],
 	const char* file,
 	AlfTestInt line,
 	AlfTestCheckParameters parameters)
@@ -750,6 +763,7 @@ void alfCheckNull(
 	);
 	alfTestCheckInternal(
 		state,
+		require,
 		pointer == NULL,
 		message,
 		file,
@@ -763,10 +777,11 @@ void alfCheckNull(
 
 void alfCheckMemEq(
 	AlfTestState* state,
+	AlfTestBool require,
 	const void* m0,
 	const void* m1,
-	const char* var0,
-	const char* var1,
+	const char var0[],
+	const char var1[],
 	AlfTestSize size,
 	const char* file,
 	AlfTestInt line,
@@ -782,6 +797,7 @@ void alfCheckMemEq(
 		(m0 && m1 && memcmp(m0, m1, size) == 0);
 	alfTestCheckInternal(
 		state,
+		require,
 		predicate,
 		message,
 		file,
@@ -795,10 +811,11 @@ void alfCheckMemEq(
 
 void alfCheckStrEq(
 	AlfTestState* state,
+	AlfTestBool require,
 	const char* str0,
 	const char* str1,
-	const char* var0,
-	const char* var1,
+	const char var0[],
+	const char var1[],
 	const char* file,
 	AlfTestInt line,
 	AlfTestCheckParameters parameters)
@@ -812,7 +829,8 @@ void alfCheckStrEq(
 		(str0 == NULL && str1 == NULL) ||
 		(str0 && str1 && strcmp(str0, str1) == 0);
 	alfTestCheckInternal(
-		state, 
+		state,
+		require,
 		predicate,
 		message, 
 		file, 
@@ -826,10 +844,11 @@ void alfCheckStrEq(
 
 void alfCheckFloatEq(
 	AlfTestState* state,
+	AlfTestBool require,
 	const float* float0,
 	const float* float1,
-	const char* var0,
-	const char* var1,
+	const char var0[],
+	const char var1[],
 	const char* file,
 	AlfTestInt line,
 	AlfTestCheckParameters parameters)
@@ -843,6 +862,7 @@ void alfCheckFloatEq(
 		(float0 - float1) <= ALF_TEST_FLOAT_EPSILON;
 	alfTestCheckInternal(
 		state,
+		require,
 		predicate,
 		message,
 		file,
@@ -856,10 +876,11 @@ void alfCheckFloatEq(
 
 void alfCheckDoubleEq(
 	AlfTestState* state,
+	AlfTestBool require,
 	const double* double0,
 	const double* double1,
-	const char* var0,
-	const char* var1,
+	const char var0[],
+	const char var1[],
 	const char* file,
 	AlfTestInt line,
 	AlfTestCheckParameters parameters)
@@ -873,6 +894,7 @@ void alfCheckDoubleEq(
 		(double0 - double1) <= ALF_TEST_DOUBLE_EPSILON;
 	alfTestCheckInternal(
 		state,
+		require,
 		predicate,
 		message,
 		file,
@@ -886,7 +908,7 @@ void alfCheckDoubleEq(
 // Utility Functions
 // ========================================================================== //
 
-char* alfLastIndexOf(char* string, char character)
+const char* alfLastIndexOf(const char* string, char character)
 {
 	AlfTestInt length = alfStringLength(string);
 	while (length > 0)

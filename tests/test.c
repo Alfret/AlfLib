@@ -81,7 +81,20 @@ ALF_TEST_MAIN()
 
 TEST_CASE("Length", "[UTF-8]")
 {
-	CHECK(alfUTF8StringLength("") == 0);
+	alfCheckTrue( 
+		_state_internal_, 
+		0, 
+		alfUTF8StringLength("") == 0, "alfUTF8StringLength(\"\") == 0", 
+		__FILENAME__, 
+		__LINE__,
+		(AlfTestCheckParameters){ 0 } 
+	);
+
+
+
+
+	
+	
 	CHECK(alfUTF8StringLength("a") == 1);
 	CHECK(alfUTF8StringLength("ö") == 1);
 	CHECK(alfUTF8StringLength("åäö") == 3);
@@ -90,7 +103,6 @@ TEST_CASE("Length", "[UTF-8]")
 	CHECK(alfUTF8StringLength(NULL) == 0,
 		"NULL strings have a length of 0");
 }
-
 // -------------------------------------------------------------------------- //
 
 ALF_TEST("Codepoint Width", "[UTF-8]")

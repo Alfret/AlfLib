@@ -194,8 +194,8 @@ typedef void(*PFN_AlfTest)(AlfTestState* state);
 // Filename macro
 #if defined(_WIN32)
 	/** Macro for name of current file **/
-#	define __FILENAME__ (alfLastIndexOf(__FILE__, '\\') ?	\
-		alfLastIndexOf(__FILE__, '\\') + 1 : __FILE__)
+#	define __FILENAME__ (alfLastIndexOf((const char*)__FILE__, '\\') ?	\
+		alfLastIndexOf((const char*)__FILE__, '\\') + 1 : (const char*)__FILE__)
 #else
 	/** Macro for name of current file **/
 #	define __FILENAME__ (alfLastIndexOf(__FILE__, '/') ?	\
@@ -282,7 +282,7 @@ typedef struct AlfTestData
 } AlfTestData;
 
 // ========================================================================== //
-// Macros for testing
+// Test Generation Macros
 // ========================================================================== //
 
 /** Macro for providing a main function that runs the tests **/
@@ -335,28 +335,48 @@ typedef struct AlfTestData
 	ALF_TEST_EXPORT void ALF_TEST_CONCAT(_alf_test_, __COUNTER__)			\
 		(AlfTestState* _state_internal_)
 
-// -------------------------------------------------------------------------- //
+// ========================================================================== //
+// Check Macros
+// ========================================================================== //
+
+#if defined(__cplusplus)
+#	define ALF_CHECK_PARAM_TYPE
+#else
+#	define ALF_CHECK_PARAM_TYPE (AlfTestCheckParameters)
+#endif
 
 /** Check that condition is true **/
 #define ALF_CHECK_TRUE(condition, ...)										\
 	alfCheckTrue(															\
-		_state_internal_, condition, #condition, __FILENAME__, __LINE__,	\
-		(AlfTestCheckParameters){ ._u = 0, __VA_ARGS__ }					\
+		_state_internal_, 0, condition, #condition, __FILENAME__, __LINE__,	\
+		ALF_CHECK_PARAM_TYPE { 0, __VA_ARGS__ }							\
 	);
 
 // -------------------------------------------------------------------------- //
 
-/** Check that condition is true. Alias for the longer version 
- * ALF_CHECK_TRUE **/
-#define ALF_CHECK(condition, ...) ALF_CHECK_TRUE(condition, ##__VA_ARGS__)
+/** Check that condition is true **/
+#define ALF_REQUIRE_TRUE(condition, ...)									\
+	alfCheckTrue(															\
+		_state_internal_, 1, condition, #condition, __FILENAME__, __LINE__,	\
+		ALF_CHECK_PARAM_TYPE{ 0, __VA_ARGS__ }							\
+	);
 
 // -------------------------------------------------------------------------- //
 
 /** Check that condition is false **/
 #define ALF_CHECK_FALSE(condition, ...)										\
 	alfCheckFalse(															\
-		_state_internal_, !(condition), #condition, __FILENAME__, __LINE__,	\
-		(AlfTestCheckParameters){ ._u = 0, __VA_ARGS__ }					\
+		_state_internal_, 0, !(condition), #condition, __FILENAME__,		\
+		__LINE__, ALF_CHECK_PARAM_TYPE{ 0, __VA_ARGS__ }				\
+	);
+
+// -------------------------------------------------------------------------- //
+
+/** Check that condition is false **/
+#define ALF_REQUIRE_FALSE(condition, ...)									\
+	alfCheckFalse(															\
+		_state_internal_, 1, !(condition), #condition, __FILENAME__,		\
+		__LINE__, ALF_CHECK_PARAM_TYPE{ 0, __VA_ARGS__ }				\
 	);
 
 // -------------------------------------------------------------------------- //
@@ -364,8 +384,17 @@ typedef struct AlfTestData
 /** Check that a pointer is not NULL **/
 #define ALF_CHECK_NOT_NULL(pointer, ...)									\
 	alfCheckNotNull(														\
-		_state_internal_, pointer, #pointer, __FILENAME__, __LINE__,		\
-		(AlfTestCheckParameters){ ._u = 0, __VA_ARGS__ }					\
+		_state_internal_, 0, pointer, #pointer, __FILENAME__, __LINE__,		\
+		ALF_CHECK_PARAM_TYPE{ 0, __VA_ARGS__ }							\
+	);
+
+// -------------------------------------------------------------------------- //
+
+/** Check that a pointer is not NULL **/
+#define ALF_REQUIRE_NOT_NULL(pointer, ...)									\
+	alfCheckNotNull(														\
+		_state_internal_, 1, pointer, #pointer, __FILENAME__, __LINE__,		\
+		ALF_CHECK_PARAM_TYPE{ 0, __VA_ARGS__ }							\
 	);
 
 // -------------------------------------------------------------------------- //
@@ -373,8 +402,17 @@ typedef struct AlfTestData
 /** Check that a pointer is NULL **/
 #define ALF_CHECK_NULL(pointer, ...)										\
 	alfCheckNull(															\
-		_state_internal_, pointer, #pointer, __FILENAME__, __LINE__,		\
-		(AlfTestCheckParameters){ ._u = 0, __VA_ARGS__ }					\
+		_state_internal_, 0, pointer, #pointer, __FILENAME__, __LINE__,		\
+		ALF_CHECK_PARAM_TYPE{ 0, __VA_ARGS__ }							\
+	);
+
+// -------------------------------------------------------------------------- //
+
+/** Check that a pointer is NULL **/
+#define ALF_REQUIRE_NULL(pointer, ...)										\
+	alfCheckNull(															\
+		_state_internal_, 1, pointer, #pointer, __FILENAME__, __LINE__,		\
+		ALF_CHECK_PARAM_TYPE{ 0, __VA_ARGS__ }							\
 	);
 
 // -------------------------------------------------------------------------- //
@@ -382,8 +420,17 @@ typedef struct AlfTestData
 /** Check that two memory regions contains the same data **/
 #define ALF_CHECK_MEM_EQ(m0, m1, size, ...)									\
 	alfCheckMemEq(															\
-		_state_internal_, m0, m1, #m0, #m1, size, __FILENAME__, __LINE__,	\
-		(AlfTestCheckParameters){ ._u = 0, __VA_ARGS__ }					\
+		_state_internal_, 0, m0, m1, #m0, #m1, size, __FILENAME__, __LINE__,\
+		ALF_CHECK_PARAM_TYPE{ 0, __VA_ARGS__ }							\
+	);
+
+// -------------------------------------------------------------------------- //
+
+/** Check that two memory regions contains the same data **/
+#define ALF_REQUIRE_MEM_EQ(m0, m1, size, ...)								\
+	alfCheckMemEq(															\
+		_state_internal_, 1, m0, m1, #m0, #m1, size, __FILENAME__, __LINE__,\
+		ALF_CHECK_PARAM_TYPE{ 0, __VA_ARGS__ }							\
 	);
 
 // -------------------------------------------------------------------------- //
@@ -391,8 +438,17 @@ typedef struct AlfTestData
 /** Check that two nul-terminated c-strings are equal **/
 #define ALF_CHECK_STR_EQ(str0, str1, ...)									\
 	alfCheckStrEq(															\
-		_state_internal_, str0, str1, #str0, #str1, __FILENAME__, __LINE__,	\
-		(AlfTestCheckParameters){ ._u = 0, __VA_ARGS__ }					\
+		_state_internal_, 0, str0, str1, #str0, #str1, __FILENAME__,		\
+		__LINE__, ALF_CHECK_PARAM_TYPE{ 0, __VA_ARGS__ }				\
+	);
+
+// -------------------------------------------------------------------------- //
+
+/** Check that two nul-terminated c-strings are equal **/
+#define ALF_REQUIRE_STR_EQ(str0, str1, ...)									\
+	alfCheckStrEq(															\
+		_state_internal_, 1, str0, str1, #str0, #str1, __FILENAME__,		\
+		__LINE__, ALF_CHECK_PARAM_TYPE{ 0, __VA_ARGS__ }				\
 	);
 
 // -------------------------------------------------------------------------- //
@@ -400,9 +456,19 @@ typedef struct AlfTestData
 /** Check that two 32-bit floating-point numbers are equal **/
 #define ALF_CHECK_FLOAT_EQ(float0, float1, ...)								\
 	alfCheckFloatEq(														\
-		_state_internal_, float0, float1, #float0, #float1, __FILENAME__,	\
-		__LINE__,															\
-		(AlfTestCheckParameters){ ._u = 0, __VA_ARGS__ }					\
+		_state_internal_, 0, float0, float1, #float0, #float1,				\
+		__FILENAME__, __LINE__,												\
+		ALF_CHECK_PARAM_TYPE{ 0, __VA_ARGS__ }							\
+	);
+
+// -------------------------------------------------------------------------- //
+
+/** Check that two 32-bit floating-point numbers are equal **/
+#define ALF_REQUIRE_FLOAT_EQ(float0, float1, ...)							\
+	alfCheckFloatEq(														\
+		_state_internal_, 1, float0, float1, #float0, #float1,				\
+		__FILENAME__, __LINE__,												\
+		ALF_CHECK_PARAM_TYPE{ 0, __VA_ARGS__ }							\
 	);
 
 // -------------------------------------------------------------------------- //
@@ -410,18 +476,46 @@ typedef struct AlfTestData
 /** Check that two 64-bit floating-point numbers are equal **/
 #define ALF_CHECK_DOUBLE_EQ(double0, double1, ...)							\
 	alfCheckDoubleEq(														\
-		_state_internal_, double0, double1, #double0, #double1,				\
+		_state_internal_, 0, double0, double1, #double0, #double1,			\
 		__FILENAME__, __LINE__,												\
-		(AlfTestCheckParameters){ __VA_ARGS__ }								\
+		ALF_CHECK_PARAM_TYPE{ 0, __VA_ARGS__ }							\
 	);
+
+// -------------------------------------------------------------------------- //
+
+/** Check that two 64-bit floating-point numbers are equal **/
+#define ALF_REQUIRE_DOUBLE_EQ(double0, double1, ...)						\
+	alfCheckDoubleEq(														\
+		_state_internal_, 1, double0, double1, #double0, #double1,			\
+		__FILENAME__, __LINE__,												\
+		ALF_CHECK_PARAM_TYPE{ 0, __VA_ARGS__ }							\
+	);
+
+// ========================================================================== //
+// Shorthand Macros
+// ========================================================================== //
+
+/** Check that condition is true. Alias for the longer version
+ * ALF_CHECK_TRUE **/
+#define ALF_CHECK(condition, ...) ALF_CHECK_TRUE(condition, ##__VA_ARGS__)
+
+// -------------------------------------------------------------------------- //
+
+/** Check that condition is true. Alias for the longer version
+ * ALF_REQUIRE_TRUE **/
+#define ALF_REQUIRE(condition, ...) ALF_REQUIRE_TRUE(condition, ##__VA_ARGS__)
 
 // ========================================================================== //
 // Catch2 Interop
 // ========================================================================== //
 
 #if defined(ALF_TEST_CATCH2_INTEROP)
-#define TEST_CASE(name, group) ALF_TEST(name, group)
-#define CHECK(condition, ...) ALF_CHECK_TRUE(condition, ##__VA_ARGS__)
+	/** Declare a test case **/
+#	define TEST_CASE(name, group) ALF_TEST(name, group)
+	/** Check condition to hold true **/
+#	define CHECK(condition, ...) ALF_CHECK_TRUE(condition, ##__VA_ARGS__)
+	/** Require condition to hold true **/
+#	define REQUIRE(condition, ...) ALF_REQUIRE_TRUE(condition, ##__VA_ARGS__)
 #endif
 
 // ========================================================================== //
@@ -439,6 +533,7 @@ AlfTestInt alfTestRun();
  * used directly. Instead use the check macros.
  * \brief Function for checking during test.
  * \param state Test state.
+ * \param require Whether the test is required to pass.
  * \param predicate Predicate to check.
  * \param predicateString Predicate in string form.
  * \param file File in which check is done.
@@ -447,8 +542,9 @@ AlfTestInt alfTestRun();
  */
 void alfCheckTrue(
 	AlfTestState* state,
+	AlfTestBool require,
 	AlfTestBool predicate,
-	const char* predicateString,
+	const char predicateString[],
 	const char* file,
 	AlfTestInt line,
 	AlfTestCheckParameters parameters);
@@ -459,6 +555,7 @@ void alfCheckTrue(
  * used directly. Instead use the check macros.
  * \brief Function for checking during test.
  * \param state Test state.
+ * \param require Whether the test is required to pass.
  * \param predicate Predicate to check.
  * \param predicateString Predicate in string form.
  * \param file File in which check is done.
@@ -467,8 +564,9 @@ void alfCheckTrue(
  */
 void alfCheckFalse(
 	AlfTestState* state,
+	AlfTestBool require,
 	AlfTestBool predicate,
-	const char* predicateString,
+	const char predicateString[],
 	const char* file,
 	AlfTestInt line,
 	AlfTestCheckParameters parameters);
@@ -479,6 +577,7 @@ void alfCheckFalse(
  * used directly. Instead use the check macros.
  * \brief Function for checking during test.
  * \param state Test state.
+ * \param require Whether the test is required to pass.
  * \param pointer Pointer to check.
  * \param pointerText Pointer in string form.
  * \param file File in which check is done.
@@ -487,8 +586,9 @@ void alfCheckFalse(
  */
 void alfCheckNotNull(
 	AlfTestState* state,
+	AlfTestBool require,
 	void* pointer,
-	const char* pointerText,
+	const char pointerText[],
 	const char* file,
 	AlfTestInt line,
 	AlfTestCheckParameters parameters);
@@ -499,6 +599,7 @@ void alfCheckNotNull(
  * used directly. Instead use the check macros.
  * \brief Function for checking during test.
  * \param state Test state.
+ * \param require Whether the test is required to pass.
  * \param pointer Pointer to check.
  * \param pointerText Pointer in string form.
  * \param file File in which check is done.
@@ -507,8 +608,9 @@ void alfCheckNotNull(
  */
 void alfCheckNull(
 	AlfTestState* state,
+	AlfTestBool require,
 	void* pointer,
-	const char* pointerText,
+	const char pointerText[],
 	const char* file,
 	AlfTestInt line,
 	AlfTestCheckParameters parameters);
@@ -519,6 +621,7 @@ void alfCheckNull(
  * used directly. Instead use the check macros.
  * \brief Function for checking during test.
  * \param state Test state.
+ * \param require Whether the test is required to pass.
  * \param m0 First memory region.
  * \param m1 Second memory region.
  * \param var0 First pointer name.
@@ -530,10 +633,11 @@ void alfCheckNull(
  */
 void alfCheckMemEq(
 	AlfTestState* state,
+	AlfTestBool require,
 	const void* m0,
 	const void* m1,
-	const char* var0,
-	const char* var1,
+	const char var0[],
+	const char var1[],
 	AlfTestSize size,
 	const char* file,
 	AlfTestInt line,
@@ -545,6 +649,7 @@ void alfCheckMemEq(
  * used directly. Instead use the check macros.
  * \brief Function for checking during test.
  * \param state Test state.
+ * \param require Whether the test is required to pass.
  * \param str0 First string.
  * \param str1 Second string.
  * \param var0 First string name.
@@ -554,11 +659,12 @@ void alfCheckMemEq(
  * \param parameters Extended parameters, contains a reason defaulted to NULL.
  */
 void alfCheckStrEq(
-	AlfTestState* state, 
+	AlfTestState* state,
+	AlfTestBool require,
 	const char* str0, 
 	const char* str1, 
-	const char* var0, 
-	const char* var1,
+	const char var0[], 
+	const char var1[],
 	const char* file,
 	AlfTestInt line,
 	AlfTestCheckParameters parameters);
@@ -569,6 +675,7 @@ void alfCheckStrEq(
  * used directly. Instead use the check macros.
  * \brief Function for checking during test.
  * \param state Test state.
+ * \param require Whether the test is required to pass.
  * \param float0 First float.
  * \param float1 Second float.
  * \param var0 First float name.
@@ -579,10 +686,11 @@ void alfCheckStrEq(
  */
 void alfCheckFloatEq(
 	AlfTestState* state,
+	AlfTestBool require,
 	const float* float0,
 	const float* float1,
-	const char* var0,
-	const char* var1,
+	const char var0[],
+	const char var1[],
 	const char* file,
 	AlfTestInt line,
 	AlfTestCheckParameters parameters);
@@ -593,6 +701,7 @@ void alfCheckFloatEq(
  * used directly. Instead use the check macros.
  * \brief Function for checking during test.
  * \param state Test state.
+ * \param require Whether the test is required to pass.
  * \param double0 First double.
  * \param double1 Second double.
  * \param var0 First float name.
@@ -603,15 +712,18 @@ void alfCheckFloatEq(
  */
 void alfCheckDoubleEq(
 	AlfTestState* state,
+	AlfTestBool require,
 	const double* double0,
 	const double* double1,
-	const char* var0,
-	const char* var1,
+	const char var0[],
+	const char var1[],
 	const char* file,
 	AlfTestInt line,
 	AlfTestCheckParameters parameters);
 
-// -------------------------------------------------------------------------- //
+// ========================================================================== //
+// Utility Functions
+// ========================================================================== //
 
 /** Returns the index of the last occurance of a character in an ASCII string.
  * \brief Returns last index of character.
@@ -619,7 +731,7 @@ void alfCheckDoubleEq(
  * \param character Character to look for.
  * \return Last index of.
  */
-char* alfLastIndexOf(char* string, char character);
+const char* alfLastIndexOf(const char* string, char character);
 
 // ========================================================================== //
 // End of header
