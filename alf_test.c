@@ -53,6 +53,9 @@
 // Color themes declarations
 // ========================================================================== //
 
+
+#define ALF_TEST_THEME_PALE
+
 // Template for color themes
 #if 0
 
@@ -160,11 +163,14 @@
 #define ALF_TEST_FORMAT_BUFFER_SIZE 1024
 
 // ========================================================================== //
-// Global Variables
+// Type Definitions
 // ========================================================================== //
 
+typedef void(*PFN_AlfTestGetData)(AlfTestData* data);
 
-// -------------------------------------------------------------------------- //
+// ========================================================================== //
+// Global Variables
+// ========================================================================== //
 
 /** Buffer that is used for temporary storage when formatting string **/
 static char sFormatBuffer[ALF_TEST_FORMAT_BUFFER_SIZE];
@@ -173,51 +179,23 @@ static char sFormatBuffer[ALF_TEST_FORMAT_BUFFER_SIZE];
 // Private structures
 // ========================================================================== //
 
-/** Internal test structure **/
-typedef struct AlfTestInternal
+typedef struct AlfTest
 {
-	/** Name of test **/
-	char* name;
-	/** Test function **/
-	PFN_AlfTest TestFunction;
-} AlfTestInternal;
+	const char* group;
+	const char* name;
+	PFN_AlfTest function;
+} AlfTest;
 
 // -------------------------------------------------------------------------- //
 
 /** Private test-state structure **/
 typedef struct tag_AlfTestState
 {
-	/** Suite that state represents **/
-	AlfTestSuite* suite;
 	/** Total check count **/
 	AlfTestInt count;
 	/** Failed check count **/
 	AlfTestInt failCount;
 } tag_AlfTestState;
-
-// -------------------------------------------------------------------------- //
-
-/** Private test-suite structure **/
-typedef struct tag_AlfTestSuite
-{
-	/** Setup function **/
-	PFN_AlfSuiteSetup Setup;
-	/** Teardown function **/
-	PFN_AlfSuiteTeardown Teardown;
-
-	/** Name of test suite **/
-	char* name;
-	/** User data **/
-	void* userData;
-
-	/** State for use during tests **/
-	AlfTestState state;
-
-	/** Test count **/
-	AlfTestInt testCount;
-	/** Tests**/
-	AlfTestInternal* tests;
-} tag_AlfTestSuite;
 
 // ========================================================================== //
 // Private function implementations
@@ -225,7 +203,7 @@ typedef struct tag_AlfTestSuite
 
 /** Setup console for platforms that does not support escape sequences out of
  * the box **/
-static void _alfSetupConsole()
+static void alfSetupConsole()
 {
 #if defined(_WIN32)
 	static AlfTestInt isSetup = 0;
@@ -254,7 +232,7 @@ static void _alfSetupConsole()
 
 // -------------------------------------------------------------------------- //
 
-static AlfTestInt _alfStringLength(const char* string)
+static AlfTestInt alfStringLength(const char* string)
 {
 	AlfTestInt length = 0;
 	while (string[length++] != 0) {}
@@ -263,20 +241,8 @@ static AlfTestInt _alfStringLength(const char* string)
 
 // -------------------------------------------------------------------------- //
 
-/** Return a copy of a nul-terminated c-string **/
-static char* _alfTestStringCopy(const char* string)
-{
-	const size_t length = _alfStringLength(string);
-	char* buffer = malloc(length + 1);
-	if (!buffer) { return NULL;  }
-	memcpy(buffer, string, length + 1);
-	return buffer;
-}
-
-// -------------------------------------------------------------------------- //
-
 /** Returns a relative time from high-performance timer **/
-static AlfTestTime _alfHighPerformanceTimer()
+static AlfTestTime alfTestTimer()
 {
 #if defined(_WIN32)
 	// Only query the performance counter frequency once
@@ -317,36 +283,10 @@ static AlfTestTime _alfHighPerformanceTimer()
 
 // -------------------------------------------------------------------------- //
 
-/** Default suite setup function that does nothing **/
-static void _alfDefaultSuiteSetup(AlfTestSuite* suite) {}
-
-// -------------------------------------------------------------------------- //
-
-/** Default suite teardown function that does nothing **/
-static void _alfDefaultSuiteTeardown(AlfTestSuite* suite) {}
-
-// -------------------------------------------------------------------------- //
-
-/** Print about-text **/
-static void _alfPrintAbout()
-{
-#if defined(ALF_TEST_PRINT_ABOUT)
-	printf(
-		"\n\t" ALF_TEST_CC_LOGO "AlfTest" ALF_TEST_CC_RESET 
-		" is a unit testing library for " ALF_TEST_CC_C "C" ALF_TEST_CC_RESET 
-		" and " ALF_TEST_CC_C "C++" ALF_TEST_CC_RESET " that is\n"
-		"\teasy to embed into a program without the need to link a\n"
-		"\tlibrary\n"
-		"\n\t" ALF_TEST_CC_LOGO "Version" ALF_TEST_CC_RESET " - 0.1.0\n\n"
-	);
-#endif
-}
-
-// -------------------------------------------------------------------------- //
-
 /** Internal check function **/
 static void alfTestCheckInternal(
-	AlfTestState* state, 
+	AlfTestState* state,
+	AlfTestBool require,
 	AlfTestBool condition,
 	const char* message, 
 	const char* file, 
@@ -356,7 +296,7 @@ static void alfTestCheckInternal(
 	state->count++;
 	state->failCount += (condition ? 0 : 1);
 	printf(
-		"\t" ALF_TEST_CC_FILE "%s" ALF_TEST_CC_RESET ":" ALF_TEST_CC_LINE "%i" 
+		"    " ALF_TEST_CC_FILE "%s" ALF_TEST_CC_RESET ":" ALF_TEST_CC_LINE "%i" 
 		ALF_TEST_CC_RESET ": %s%s" ALF_TEST_CC_RESET " - " ALF_TEST_CC_TYPE "%s" 
 		ALF_TEST_CC_RESET "%s%s%s\n", 
 		file, (int)line,
@@ -367,6 +307,11 @@ static void alfTestCheckInternal(
 		explanation ? explanation : "",
 		explanation ? "\"" : ""
 	);
+	if (!condition && require)
+	{
+		printf("Required test failed...");
+		exit(-1);
+	}
 }
 
 // -------------------------------------------------------------------------- //
@@ -393,205 +338,340 @@ static char* alfTestFormatString(const char* format, ...)
 	return result;
 }
 
+// -------------------------------------------------------------------------- //
+
+static void* alfTestOpenLibrary()
+{
+#if defined(_WIN32)
+	return GetModuleHandleW(NULL);
+#else
+	return dlopen(NULL, RTLD);
+#endif
+}
+
+// -------------------------------------------------------------------------- //
+
+static void* alfTestGetProcAddress(void* library, const char* name)
+{
+#if defined(_WIN32)
+	return (PFN_AlfTestGetData)GetProcAddress(library, name);
+#else
+	return dlsym(library, name);
+#endif
+}
+
+// ========================================================================== //
+// Internal List Implementation
+// ========================================================================== //
+
+/** List data **/
+typedef struct AlfTestList
+{
+	/** Capacity **/
+	AlfTestSize capacity;
+	/** Size of list in number of objects in it **/
+	AlfTestSize size;
+	/** Size of each object in list, in bytes **/
+	AlfTestSize objectSize;
+	
+	/** Data buffer **/
+	AlfTest* buffer;
+} AlfTestList;
+
+// -------------------------------------------------------------------------- //
+
+
+AlfTestList* alfTestCreateList()
+{
+	AlfTestList* list = malloc(sizeof(AlfTestList));
+	if (!list) { return NULL; }
+
+	list->capacity = 10;
+	list->size = 0;
+	list->buffer = malloc(sizeof(AlfTest) * list->capacity);
+	if (!list->buffer)
+	{
+		free(list);
+		return NULL;
+	}
+
+	return list;
+}
+
+// -------------------------------------------------------------------------- //
+
+void alfTestDestroyList(AlfTestList* list)
+{
+	free(list->buffer);
+	free(list);
+}
+
+// -------------------------------------------------------------------------- //
+
+AlfTestBool alfTestListAdd(AlfTestList* list, const AlfTest* test)
+{
+	if (list->size >= list->capacity)
+	{
+		list->capacity *= 2;
+		AlfTest* buffer = malloc(sizeof(AlfTest) * list->capacity);
+		if (!buffer) { return 0; }
+		memcpy(buffer, list->buffer, sizeof(AlfTest) * list->size);
+		free(list->buffer);
+		list->buffer = buffer;
+	}
+	list->buffer[list->size++] = *test;
+	return 1;
+}
+
+// -------------------------------------------------------------------------- //
+
+AlfTest* alfTestListGet(AlfTestList* list, AlfTestInt index)
+{
+	return &list->buffer[index];
+}
+
+// -------------------------------------------------------------------------- //
+
+void alfTestListSwap(AlfTestList* list, AlfTestInt index0, AlfTestInt index1)
+{
+	AlfTest* test0 = alfTestListGet(list, index0);
+	AlfTest* test1 = alfTestListGet(list, index1);
+	const AlfTest temp = *test0;
+	*test0 = *test1;
+	*test1 = temp;
+}
+
+// -------------------------------------------------------------------------- //
+
+void alfTestListSortAux(AlfTestList *list, AlfTestInt low, AlfTestInt high)
+{
+	if (low < high)
+	{
+		AlfTest* pivot = alfTestListGet(list, high);
+		uint32_t i = low;
+		for (uint32_t j = low; j < high; j++)
+		{
+			AlfTest* object = alfTestListGet(list, j);
+			if (strcmp(pivot->group, object->group) < 0)
+			{
+				alfTestListSwap(list, i, j);
+				i++;
+			}
+		}
+		alfTestListSwap(list, i, high);
+
+		alfTestListSortAux(list, low, i > 0 ? i - 1 : 0);
+		alfTestListSortAux(list, i + 1, high);
+	}
+}
+
+// -------------------------------------------------------------------------- //
+void alfTestListSort(AlfTestList* list)
+{
+	alfTestListSortAux(
+		list, 
+		0, 
+		(AlfTestInt)(list->size > 0 ? list->size - 1 : 0)
+	);
+}
+
+// -------------------------------------------------------------------------- //
+
+AlfTestSize alfTestListSize(AlfTestList* list)
+{
+	return list->size;
+}
+
 // ========================================================================== //
 // Function implementations
 // ========================================================================== //
 
-AlfTestSuite* alfCreateTestSuite(char* name, AlfTest* tests, AlfTestInt count)
+AlfTestInt alfTestRunList(AlfTestList* list)
 {
-	// Do required setup
-	_alfSetupConsole();
-
-	// Allocate suite
-	AlfTestSuite* suite = malloc(sizeof(AlfTestSuite));
-	if (!suite) { return NULL; }
-
-	// Setup suite
-	suite->name = _alfTestStringCopy(name);
-	suite->Setup = _alfDefaultSuiteSetup;
-	suite->Teardown = _alfDefaultSuiteTeardown;
-	suite->state = (AlfTestState) { suite, 0, 0 };
-
-	// Setup tests
-	suite->testCount = count;
-	suite->tests = malloc(sizeof(AlfTestInternal) * suite->testCount);
-	if (!suite->tests)
-	{
-		free(suite);
-		return NULL;
-	}
-	for (AlfTestInt i = 0; i < suite->testCount; i++)
-	{
-		AlfTestInternal* test = &suite->tests[i];
-		test->name = _alfTestStringCopy(tests[i].name);
-		test->TestFunction = tests[i].TestFunction;
-	}
-
-	return suite;
-}
-
-// -------------------------------------------------------------------------- //
-
-void alfDestroyTestSuite(AlfTestSuite* suite)
-{
-	for (AlfTestInt i = 0; i < suite->testCount; i++)
-	{
-		free(suite->tests[i].name);
-	}
-	free(suite->tests);
-	free(suite->name);
-	free(suite);
-}
-
-// -------------------------------------------------------------------------- //
-
-void alfSetSuiteUserData(AlfTestSuite* suite, void* data)
-{
-	suite->userData = data;
-}
-
-// -------------------------------------------------------------------------- //
-
-void* alfGetSuiteUserData(AlfTestSuite* suite)
-{
-	return suite->userData;
-}
-
-// -------------------------------------------------------------------------- //
-
-void* alfGetSuiteUserDataFromState(AlfTestState* state)
-{
-	return state->suite->userData;
-}
-
-// -------------------------------------------------------------------------- //
-
-void alfSetSuiteSetupCallback(AlfTestSuite* suite, PFN_AlfSuiteSetup callback)
-{
-	suite->Setup = callback;
-}
-
-// -------------------------------------------------------------------------- //
-
-void alfSetSuiteTeardownCallback(
-	AlfTestSuite* suite, 
-	PFN_AlfSuiteTeardown callback)
-{
-	suite->Teardown = callback;
-}
-
-// -------------------------------------------------------------------------- //
-
-void alfClearSuiteSetupCallback(AlfTestSuite* suite)
-{
-	alfSetSuiteSetupCallback(suite, _alfDefaultSuiteSetup);
-}
-
-// -------------------------------------------------------------------------- //
-
-void alfClearSuiteTeardownCallback(AlfTestSuite* suite)
-{
-	alfSetSuiteTeardownCallback(suite, _alfDefaultSuiteTeardown);
-}
-
-// -------------------------------------------------------------------------- //
-
-AlfTestInt alfRunSuite(AlfTestSuite* suite)
-{
-	AlfTestSuite* suites[1];
-	suites[0] = suite;
-	return alfRunSuites(suites, 1);
-}
-
-// -------------------------------------------------------------------------- //
-
-AlfTestInt alfRunSuites(AlfTestSuite** suites, AlfTestInt suiteCount)
-{
-	_alfPrintAbout();
-
-	// Run all suites
-	AlfTestInt totalCheckCount = 0;
-	AlfTestInt failCheckCount = 0;
+	// Information
+	AlfTestInt totalGroupCount = 0;
+	AlfTestInt groupFailCount = 0;
 	AlfTestInt totalTestCount = 0;
-	AlfTestInt failTestCount = 0;
-	AlfTestInt failSuiteCount = 0;
-	const AlfTestTime startTime = _alfHighPerformanceTimer();
-	for (AlfTestInt suiteIndex = 0; suiteIndex < suiteCount; suiteIndex++)
-	{
-		AlfTestSuite* suite = suites[suiteIndex];
-		suite->Setup(suite);
-		printf(ALF_TEST_CC_SUITE "SUITE" ALF_TEST_CC_RESET " \"%s\"\n", 
-			suite->name);
+	AlfTestInt testFailCount = 0;
+	AlfTestState state = { 0, 0 };
 
-		// Run all tests in suite
-		const AlfTestInt suiteFailTestCountBefore = failTestCount;
-		const AlfTestTime suiteStartTime = _alfHighPerformanceTimer();
-		for (AlfTestInt testIndex = 0; testIndex < suite->testCount; testIndex++)
+	// Get time for start
+	const AlfTestTime startTime = alfTestTimer();
+	AlfTestTime groupStartTime = startTime;
+
+	// Run tests from list
+	const char* lastTestGroup = NULL;
+	AlfTestBool groupDidFail = 0;
+	for (AlfTestInt i = 0; i < alfTestListSize(list); i++)
+	{
+		// Retrieve information of test to run
+		AlfTest* test = alfTestListGet(list, i);
+		if (!test) { continue; }
+
+		// Check if test is part of current group
+		if (!lastTestGroup || strcmp(lastTestGroup, test->group) != 0)
 		{
-			// Clear state
-			suite->state.count = 0;
-			suite->state.failCount = 0;
+			// Print time of last group
+			if (lastTestGroup)
+			{
+				const AlfTestTime currentTime = alfTestTimer();
+				const AlfTestTime groupTime = currentTime - groupStartTime;
+				printf("  group finished in " ALF_TEST_CC_TIME "%.3f" 
+					ALF_TEST_CC_RESET " ms\n", groupTime / 1000000.0);
+				groupStartTime = currentTime;
+			}
 
-			// Run test
-			AlfTestInternal* test = &suite->tests[testIndex];
-			printf("Running " ALF_TEST_CC_NAME "%s" ALF_TEST_CC_RESET ":\n", 
-				test->name);
-			const AlfTestTime timeBefore = _alfHighPerformanceTimer();
-			test->TestFunction(&suite->state);
-			const AlfTestTime timeDelta = _alfHighPerformanceTimer() - timeBefore;
-			printf("\tTest finished in " ALF_TEST_CC_TIME "%.3f" 
-				ALF_TEST_CC_RESET " ms\n", timeDelta / 1000000.0);
-
-			// Update suite state
-			totalTestCount++;
-			totalCheckCount += suite->state.count;
-			failCheckCount += suite->state.failCount;
-			if (suite->state.failCount > 0) { failTestCount++; }
+			// New group
+			if (groupDidFail)
+			{
+				groupFailCount++;
+				groupDidFail = 0;
+			}
+			totalGroupCount++;
+			if (lastTestGroup) { printf("\n"); }
+			lastTestGroup = test->group;
+			printf(ALF_TEST_CC_SUITE "Group" ALF_TEST_CC_RESET " %s\n",
+				lastTestGroup);
 		}
-		const AlfTestTime suiteElapsedTime = 
-			_alfHighPerformanceTimer() - suiteStartTime;
-		printf("Suite finished in " ALF_TEST_CC_TIME "%.3f" ALF_TEST_CC_RESET 
-			" ms\n\n", suiteElapsedTime / 1000000.0);
-		if (failTestCount - suiteFailTestCountBefore > 0) { failSuiteCount++; }
-		suite->Teardown(suite);
-	}
-	const AlfTestTime totalTime = _alfHighPerformanceTimer() - startTime;
 
-	// Print summary and return
-	const AlfTestInt passSuiteCount = suiteCount - failSuiteCount;
-	const AlfTestInt passCheckCount = totalCheckCount - failCheckCount;
-	const AlfTestInt passTestCount = totalTestCount - failTestCount;
-	printf(ALF_TEST_CC_SUITE "SUMMARY\n" ALF_TEST_CC_RESET);
+		// Run test
+		const AlfTestInt testCheckFailCountBefore = state.failCount;
+		printf(ALF_TEST_CC_NAME "  Test" ALF_TEST_CC_RESET " %s:\n",
+			test->name);
+		const AlfTestTime timeBefore = alfTestTimer();
+		test->function(&state);
+		const AlfTestTime timeDelta = alfTestTimer() - timeBefore;
+		printf("    test finished in " ALF_TEST_CC_TIME "%.3f"
+			ALF_TEST_CC_RESET " ms\n", timeDelta / 1000000.0);
+		if (testCheckFailCountBefore != state.failCount)
+		{
+			testFailCount++;
+			groupDidFail = 1;
+		}
+
+		// Update statistics
+		totalTestCount++;
+		lastTestGroup = test->group;
+	}
+
+	// Print time of last group
+	if (lastTestGroup)
+	{
+		const AlfTestTime currentTime = alfTestTimer();
+		const AlfTestTime groupTime = currentTime - groupStartTime;
+		printf("  group finished in " ALF_TEST_CC_TIME "%.3f"
+			ALF_TEST_CC_RESET " ms\n", groupTime / 1000000.0);
+	}
+
+	// Print summary
+	const AlfTestInt groupPassCount = totalGroupCount - groupFailCount;
+	const AlfTestInt testPassCount = totalTestCount - testFailCount;
+	const AlfTestInt checkPassCount = state.count - state.failCount;
+
+	printf("\n" ALF_TEST_CC_SUITE "SUMMARY\n" ALF_TEST_CC_RESET);
 	printf("Type\t\tTotal\t\tPass\t\tFail\n");
-	printf("Suite\t\t%i\t\t%i\t\t%i\n", 
-		(int32_t)suiteCount, (int32_t)passSuiteCount, (int32_t)failSuiteCount);
-	printf("Test\t\t%i\t\t%i\t\t%i\n", 
-		(int32_t)totalTestCount, (int32_t)passTestCount, (int32_t)failTestCount);
-	printf("Check\t\t%i\t\t%i\t\t%i\n", 
-		(int32_t)totalCheckCount, (int32_t)passCheckCount, (int32_t)failCheckCount);
-	printf("Run completed in " ALF_TEST_CC_TIME "%f" ALF_TEST_CC_RESET " ms\n", 
-		totalTime / 1000000.0);
+	printf(
+		"Group\t\t%i\t\t%i\t\t%i\n",
+		(int32_t)totalGroupCount, 
+		(int32_t)groupPassCount, 
+		(int32_t)groupFailCount
+	);
+	printf(
+		"Test\t\t%i\t\t%i\t\t%i\n",
+		(int32_t)totalTestCount,
+		(int32_t)testPassCount,
+		(int32_t)testFailCount
+	);
+	printf(
+		"Check\t\t%i\t\t%i\t\t%i\n",
+		(int32_t)state.count, 
+		(int32_t)checkPassCount, 
+		(int32_t)state.failCount
+	);
+	printf("completed in " ALF_TEST_CC_TIME "%f" ALF_TEST_CC_RESET " ms\n",
+		(alfTestTimer() - startTime) / 1000000.0);
 
-	// Print final result
-	if (failTestCount == 0)
-	{
-		printf(ALF_TEST_CC_PASS "ALL TESTS PASSED " ALF_TEST_CC_RESET "\n");
-	}
-	else
-	{
-		printf(ALF_TEST_CC_FAIL "SOME TESTS FAILED" ALF_TEST_CC_RESET "\n");
-	}
-
-	// Return fail count
-	return failTestCount;
+	// Return the failure count
+	return state.failCount;
 }
 
 // -------------------------------------------------------------------------- //
+
+AlfTestInt alfTestRun()
+{
+	alfSetupConsole();
+
+	// Open library of current process to retrieve functions from
+	void* library = alfTestOpenLibrary();
+
+	// Create list to hold test data
+	AlfTestList* list = alfTestCreateList();
+
+	// Find all test functions
+	AlfTestInt index = 0, lastIndex = 0;
+	AlfTestBool abortSearch = 0;
+	while (!abortSearch)
+	{
+		// Check if there is a 'getData' functions at this index
+		char nameBuffer[256];
+		snprintf(nameBuffer, 256, "_alf_test_get_data_%i", index);
+		const PFN_AlfTestGetData GetData = 
+			alfTestGetProcAddress(library, nameBuffer);
+		if (GetData)
+		{
+			// Go past the 'getData' function
+			index++;
+
+			// And if so, then there is a also a test function at index + 1
+			snprintf(nameBuffer, 256, "_alf_test_%i", index);
+			const PFN_AlfTest Test = alfTestGetProcAddress(library, nameBuffer);
+
+			// Retrieve test data
+			AlfTestData data;
+			GetData(&data);
+
+			// Add test
+			AlfTest test;
+			test.group = data.groupName;
+			test.name = data.testName;
+			test.function = Test;
+			alfTestListAdd(list, &test);
+
+			// Set last found index to this
+			lastIndex = index;
+		}
+
+
+		// Abort if we have not found a function in 10 attempts
+		if (index >= lastIndex + 10)
+		{
+			abortSearch = 1;
+		}
+
+		// Increment index to look at next spot
+		index++;
+	}
+
+	// Sort list
+	alfTestListSort(list);
+
+	// Run tests in list
+	const AlfTestInt failures = alfTestRunList(list);
+	alfTestDestroyList(list);
+
+	// Return number of failed tests
+	return failures;
+}
+
+// ========================================================================== //
+// Check Functions
+// ========================================================================== //
 
 void alfCheckTrue(
 	AlfTestState* state,
+	AlfTestBool require,
 	AlfTestBool predicate,
-	const char* predicateString,
+	const char predicateString[],
 	const char* file,
 	AlfTestInt line,
 	AlfTestCheckParameters parameters)
@@ -602,6 +682,7 @@ void alfCheckTrue(
 	);
 	alfTestCheckInternal(
 		state,
+		require,
 		predicate,
 		message,
 		file,
@@ -615,8 +696,9 @@ void alfCheckTrue(
 
 void alfCheckFalse(
 	AlfTestState* state,
+	AlfTestBool require,
 	AlfTestBool predicate,
-	const char* predicateString,
+	const char predicateString[],
 	const char* file,
 	AlfTestInt line,
 	AlfTestCheckParameters parameters)
@@ -627,6 +709,7 @@ void alfCheckFalse(
 	);
 	alfTestCheckInternal(
 		state,
+		require,
 		predicate,
 		message,
 		file,
@@ -640,8 +723,9 @@ void alfCheckFalse(
 
 void alfCheckNotNull(
 	AlfTestState* state,
+	AlfTestBool require,
 	void* pointer,
-	const char* pointerText,
+	const char pointerText[],
 	const char* file,
 	AlfTestInt line,
 	AlfTestCheckParameters parameters)
@@ -652,6 +736,7 @@ void alfCheckNotNull(
 	);
 	alfTestCheckInternal(
 		state,
+		require,
 		pointer != NULL,
 		message,
 		file,
@@ -665,8 +750,9 @@ void alfCheckNotNull(
 
 void alfCheckNull(
 	AlfTestState* state,
+	AlfTestBool require,
 	void* pointer,
-	const char* pointerText,
+	const char pointerText[],
 	const char* file,
 	AlfTestInt line,
 	AlfTestCheckParameters parameters)
@@ -677,6 +763,7 @@ void alfCheckNull(
 	);
 	alfTestCheckInternal(
 		state,
+		require,
 		pointer == NULL,
 		message,
 		file,
@@ -690,10 +777,11 @@ void alfCheckNull(
 
 void alfCheckMemEq(
 	AlfTestState* state,
+	AlfTestBool require,
 	const void* m0,
 	const void* m1,
-	const char* var0,
-	const char* var1,
+	const char var0[],
+	const char var1[],
 	AlfTestSize size,
 	const char* file,
 	AlfTestInt line,
@@ -709,6 +797,7 @@ void alfCheckMemEq(
 		(m0 && m1 && memcmp(m0, m1, size) == 0);
 	alfTestCheckInternal(
 		state,
+		require,
 		predicate,
 		message,
 		file,
@@ -722,10 +811,11 @@ void alfCheckMemEq(
 
 void alfCheckStrEq(
 	AlfTestState* state,
+	AlfTestBool require,
 	const char* str0,
 	const char* str1,
-	const char* var0,
-	const char* var1,
+	const char var0[],
+	const char var1[],
 	const char* file,
 	AlfTestInt line,
 	AlfTestCheckParameters parameters)
@@ -739,7 +829,8 @@ void alfCheckStrEq(
 		(str0 == NULL && str1 == NULL) ||
 		(str0 && str1 && strcmp(str0, str1) == 0);
 	alfTestCheckInternal(
-		state, 
+		state,
+		require,
 		predicate,
 		message, 
 		file, 
@@ -753,10 +844,11 @@ void alfCheckStrEq(
 
 void alfCheckFloatEq(
 	AlfTestState* state,
+	AlfTestBool require,
 	const float* float0,
 	const float* float1,
-	const char* var0,
-	const char* var1,
+	const char var0[],
+	const char var1[],
 	const char* file,
 	AlfTestInt line,
 	AlfTestCheckParameters parameters)
@@ -770,6 +862,7 @@ void alfCheckFloatEq(
 		(float0 - float1) <= ALF_TEST_FLOAT_EPSILON;
 	alfTestCheckInternal(
 		state,
+		require,
 		predicate,
 		message,
 		file,
@@ -783,10 +876,11 @@ void alfCheckFloatEq(
 
 void alfCheckDoubleEq(
 	AlfTestState* state,
+	AlfTestBool require,
 	const double* double0,
 	const double* double1,
-	const char* var0,
-	const char* var1,
+	const char var0[],
+	const char var1[],
 	const char* file,
 	AlfTestInt line,
 	AlfTestCheckParameters parameters)
@@ -800,6 +894,7 @@ void alfCheckDoubleEq(
 		(double0 - double1) <= ALF_TEST_DOUBLE_EPSILON;
 	alfTestCheckInternal(
 		state,
+		require,
 		predicate,
 		message,
 		file,
@@ -809,11 +904,13 @@ void alfCheckDoubleEq(
 	free(message);
 }
 
-// -------------------------------------------------------------------------- //
+// ========================================================================== //
+// Utility Functions
+// ========================================================================== //
 
-char* alfLastIndexOf(char* string, char character)
+const char* alfLastIndexOf(const char* string, char character)
 {
-	AlfTestInt length = _alfStringLength(string);
+	AlfTestInt length = alfStringLength(string);
 	while (length > 0)
 	{
 		if (string[length] == character)
@@ -824,7 +921,3 @@ char* alfLastIndexOf(char* string, char character)
 	}
 	return string;
 }
-
-// ========================================================================== //
-// End of Implementation
-// ========================================================================== //
