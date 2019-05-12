@@ -26,13 +26,14 @@
 
 // Standard headers
 #include <string.h>
+#include <stdio.h>
 
 // Alf headers
-#include "alf_test.h"
-#include "alf_unicode.h"
-#include "alf_thread.h"
-#include "alf_collection.h"
-#include <stdio.h>
+#include "../alf_collection.h"
+#include "../alf_file.h"
+#include "../alf_test.h"
+#include "../alf_thread.h"
+#include "../alf_unicode.h"
 
 // ========================================================================== //
 // Local Testing Data
@@ -75,9 +76,27 @@ uint32_t numbers0through79[] = {
 
 void test_alfFileOpen(AlfTestState* state)
 {
-	
+  char buffer[ALF_FILE_MAX_PATH_LENGTH];
+  alfFilesystemGetWorkingDirectory(buffer);
 
-	
+
+
+  char p0[ALF_FILE_MAX_PATH_LENGTH];
+  alfPathJoin(p0, "some", "path");
+
+  char p1[ALF_FILE_MAX_PATH_LENGTH];
+  alfPathJoin(p1, "some/", "path");
+
+  char p2[ALF_FILE_MAX_PATH_LENGTH];
+  alfPathJoin(p2, "some", "/path");
+
+  char p3[ALF_FILE_MAX_PATH_LENGTH];
+  alfPathJoin(p3, "some/", "/path");
+
+
+
+
+  int y = 0;
 }
 
 // ========================================================================== //

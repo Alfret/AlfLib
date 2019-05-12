@@ -44,15 +44,34 @@ typedef uint32_t AlfBool;
 // -------------------------------------------------------------------------- //
 
 #ifndef ALF_TRUE
-	/** Boolean value true **/
-#	define ALF_TRUE ((AlfBool)1)
+  /** Boolean value true **/
+# define ALF_TRUE ((AlfBool)1)
 #endif
 
 // -------------------------------------------------------------------------- //
 
 #ifndef ALF_FALSE
-	/** Boolean value false **/
-#	define ALF_FALSE ((AlfBool)0)
+  /** Boolean value false **/
+# define ALF_FALSE ((AlfBool)0)
+#endif
+
+// -------------------------------------------------------------------------- //
+
+/** Macro for the maximum path length on the library **/
+#define ALF_FILE_MAX_PATH_LENGTH 4096
+
+// -------------------------------------------------------------------------- //
+
+#if defined(_WIN32)
+  /** Path separator character **/
+# define ALF_FILE_PATH_SEPARATOR '\\'
+  /** Path separator string **/
+# define ALF_FILE_PATH_SEPARATOR_STR "\\"
+#else
+  /** Path separator character **/
+# define ALF_FILE_PATH_SEPARATOR '/'
+  /** Path separator string **/
+# define ALF_FILE_PATH_SEPARATOR_STR "/"
 #endif
 
 // ========================================================================== //
@@ -68,22 +87,22 @@ typedef uint32_t AlfBool;
  */
 typedef enum AlfFileResult
 {
-	/** Success **/
-	ALF_FILE_SUCCESS,
-	/** Unknown error **/
-	ALF_FILE_UNKNOWN_ERROR,
-	/** Out of memory **/
-	ALF_FILE_OUT_OF_MEMORY,
-	/** End of file reached **/
-	ALF_FILE_EOF,
-	/** Invalid arguments **/
-	ALF_FILE_INVALID_ARGUMENTS,
-	/** File was not found **/
-	ALF_FILE_NOT_FOUND,
-	/** File already exists **/
-	ALF_FILE_ALREADY_EXISTS,
-	/** Access to file was denied **/
-	ALF_FILE_ACCESS_DENIED,
+  /** Success **/
+  kAlfFileSuccess,
+  /** Unknown error **/
+  kAlfFileUnknownError,
+  /** Out of memory **/
+  kAlfFileOutOfMemory,
+  /** End of file reached **/
+  kAlfFileEof,
+  /** Invalid arguments **/
+  kAlfFileInvalidArguments,
+  /** File was not found **/
+  kAlfFileNotFound,
+  /** File already exists **/
+  kAlfFileAlreadyExists,
+  /** Access to file was denied **/
+  kAlfFileAccessDenied,
 } AlfFileResult;
 
 // -------------------------------------------------------------------------- //
@@ -97,27 +116,26 @@ typedef enum AlfFileResult
  */
 typedef enum AlfFileFlag
 {
-	/** Open file for reading **/
-	ALF_FILE_FLAG_READ = (1 << 0),
-	/** Open file for writing **/
-	ALF_FILE_FLAG_WRITE = (1 << 1),
-	/** Open file for reading and writing **/
-	ALF_FILE_FLAG_READ_WRITE = ALF_FILE_FLAG_READ | ALF_FILE_FLAG_WRITE,
-	/** Open file in shared read mode **/
-	ALF_FILE_FLAG_SHARE_READ = (1 << 2),
-	/** Open file in shared write mode **/
-	ALF_FILE_FLAG_SHARE_WRITE = (1 << 3),
-	/** Open file in shared read and write mode **/
-	ALF_FILE_FLAG_SHARE_READ_WRITE = 
-		ALF_FILE_FLAG_SHARE_READ | ALF_FILE_FLAG_SHARE_WRITE,
-	/** Create file if it does not exist **/
-	ALF_FILE_FLAG_CREATE = (1 << 4),
-	/** Overwrite file. If ALF_FILE_FLAG_CREATE was not specified then this will
-	 * truncate the file **/
-	ALF_FILE_FLAG_OVERWRITE = (1 << 5),
-	/** Open file with the cursor placed at the end. This means that contents
-	 * can be appended to an already existing file **/
-	ALF_FILE_FLAG_APPEND = (1 << 6)
+  /** Open file for reading **/
+  kAlfFileFlagRead = (1 << 0),
+  /** Open file for writing **/
+  kAlfFileFlagWrite = (1 << 1),
+  /** Open file for reading and writing **/
+  kAlfFileFlagReadWrite = kAlfFileFlagRead | kAlfFileFlagWrite,
+  /** Open file in shared read mode **/
+  kAlfFileFlagShareRead = (1 << 2),
+  /** Open file in shared write mode **/
+  kAlfFileFlagShareWrite = (1 << 3),
+  /** Open file in shared read and write mode **/
+  kAlfFileFlagShareReadWrite = kAlfFileFlagShareRead | kAlfFileFlagShareWrite,
+  /** Create file if it does not exist **/
+  kAlfFileFlagCreate = (1 << 4),
+  /** Overwrite file. If kAlfFileFlagCreate was not specified then this will
+   * truncate the file **/
+  kAlfFileFlagOverwrite = (1 << 5),
+  /** Open file with the cursor placed at the end. This means that contents
+   * can be appended to an already existing file **/
+  kAlfFileFlagAppend = (1 << 6)
 } AlfFileFlag;
 
 // ========================================================================== //
@@ -134,10 +152,110 @@ typedef enum AlfFileFlag
 typedef struct tag_AlfFile AlfFile;
 
 // ========================================================================== //
+// Path Functions
+// ========================================================================== //
+
+/** Join two paths together into one. It's guaranteed to be separated by a 
+ * single separator even if any of the two paths contains a preceding or 
+ * trailing delimiter. 
+ * \brief Join paths.
+ * \param outputPath Buffer where the result is written. Must be at least 
+ * ALF_FILE_MAX_PATH_LENGTH bytes in size.
+ * \param path0 First path.
+ * \param path1 Second path.
+ * \return True if the join is successful, otherwise false.
+ */
+AlfBool alfPathJoin(char* outputPath, const char* path0, const char* path1);
+
+// ========================================================================== //
 // Filesystem Functions
 // ========================================================================== //
 
+/** Returns the current working directory of the program written to the 
+ * specified buffer.
+ * \note The buffer must be at least of length ALF_FILE_MAX_PATH_LENGTH.
+ * \brief Returns the working directory.
+ * \param buffer Buffer that the path is written to.
+ */
+void alfFilesystemGetWorkingDirectory(char* buffer);
 
+// -------------------------------------------------------------------------- //
+
+/** Set the current working directory of the program.
+ * \brief Set working directory.
+ * \param path Working directory to set.
+ */
+void alfFilesystemSetWorkingDirectory(const char* path);
+
+// -------------------------------------------------------------------------- //
+
+/** Returns whether or not an object exists in the filesystem at the specified
+ * path.
+ * \brief Returns whether object exists in filesystem.
+ * \param path Path in filesystem.
+ * \return True if the object exists, otherwise false.
+ */
+AlfBool alfFilesystemPathExists(const char* path);
+
+// -------------------------------------------------------------------------- //
+
+/** Create a file in the filesystem at the specified path. If the override flag
+ * is set then any existing file at the same path is overridden.
+ * \brief Create file.
+ * \param path Path to file that is to be created.
+ * \param override Whether to override any existing file.
+ * \return Result.
+ * - kAlfFileSuccess: Successfully created file.
+ */
+AlfFileResult alfFilesystemCreateFile(const char* path, AlfBool override);
+
+// -------------------------------------------------------------------------- //
+
+/** Create a directory in the filesystem at the specified path. If the recursive
+ * flag is set then the function will create any intermediate directories as 
+ * needed to create the final directory.
+ * \brief Create directory.
+ * \param path Path to directory.
+ * \param recursive Whether to create intermediate directories.
+ * \return Result.
+ * - kAlfFileSuccess: Successfully created directory.
+ * - kAlfFileNotFound: Intermediate directory or destination directory could 
+ *   not be created. This may be caused by the recursive flag not being set, 
+ *   thus causing intermediate directories to not be created.
+ */
+AlfFileResult alfFilesystemCreateDirectory(const char* path, AlfBool recursive);
+
+// -------------------------------------------------------------------------- //
+
+/** Delete a file in the filesystem at the specified path.
+ * \brief Delete file.
+ * \param path Path to file to delete.
+ * \return Result.
+ * - kAlfFileSuccess: Successfully deleted file.
+ */
+AlfFileResult alfFilesystemDeleteFile(const char* path);
+
+// -------------------------------------------------------------------------- //
+
+/** Returns whether or not the object at the specified path in the filesystem is
+ * a file. If the object is not a file or does not exist then the function 
+ * returns false.
+ * \brief Returns whether path points to a file.
+ * \param path Path.
+ * \return True if the object at the path is a file, otherwise false.
+ */
+AlfBool alfFilesystemIsFilePath(const char* path);
+
+// -------------------------------------------------------------------------- //
+
+/** Returns whether or not the object at the specified path in the filesystem is
+ * a directory. If the object is not a directory or does not exist then the 
+ * function returns false.
+ * \brief Returns whether path points to a directory.
+ * \param path Path.
+ * \return True if the object at the path is a directory, otherwise false.
+ */
+AlfBool alfFilesystemIsDirectoryPath(const char* path);
 
 // ========================================================================== //
 // File Functions
@@ -155,7 +273,7 @@ typedef struct tag_AlfFile AlfFile;
  * \param flags Flag to determine how to open file.
  * \param fileOut Handle to opened file.
  * \return Result.
- * - ALF_FILE_SUCCESS: Successfully opened file.
+ * - kAlfFileSuccess: Successfully opened file.
  * - LN_OUT_OF_MEMORY: Failed allocation.
  * - LN_INVALID_ARGUMENTS: Invalid flags.
  * - LN_ACCESS_DENIED: Access denied.
@@ -163,7 +281,9 @@ typedef struct tag_AlfFile AlfFile;
  * - LN_UNKNOWN_ERROR: Unknown error. Call icGetLastError to retrieve a
  * description of the error.
  */
-AlfFileResult alfFileOpen(const char* path, AlfFileFlag flags, AlfFile** fileOut);
+AlfFileResult alfFileOpen(const char* path,
+                          AlfFileFlag flags,
+                          AlfFile** fileOut);
 
 // -------------------------------------------------------------------------- //
 
@@ -213,7 +333,10 @@ void alfFileSeekEnd(AlfFile* file);
  * it will not be set.
  * \return Result.
  */
-AlfFileResult alfFileRead(const AlfFile* file, uint8_t* buffer, uint64_t bytesToRead, uint64_t* bytesRead);
+AlfFileResult alfFileRead(const AlfFile* file,
+                          uint8_t* buffer,
+                          uint64_t bytesToRead,
+                          uint64_t* bytesRead);
 
 // -------------------------------------------------------------------------- //
 
@@ -226,7 +349,10 @@ AlfFileResult alfFileRead(const AlfFile* file, uint8_t* buffer, uint64_t bytesTo
  * \param[out] writtenBytes Number of bytes that was written.
  * \return Result.
  */
-AlfFileResult alfFileWrite(const AlfFile* file, uint8_t* buffer, uint64_t bytesToWrite, uint64_t* writtenBytes);
+AlfFileResult alfFileWrite(const AlfFile* file,
+                           uint8_t* buffer,
+                           uint64_t bytesToWrite,
+                           uint64_t* writtenBytes);
 
 // -------------------------------------------------------------------------- //
 
