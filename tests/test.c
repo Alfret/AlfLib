@@ -70,6 +70,17 @@ uint32_t numbers0through79[] = {
 };
 
 // ========================================================================== //
+// File Tests
+// ========================================================================== //
+
+void test_alfFileOpen(AlfTestState* state)
+{
+	
+
+	
+}
+
+// ========================================================================== //
 // Unicode Tests
 // ========================================================================== //
 
@@ -301,6 +312,12 @@ int main()
 	// Startup
 	alfThreadStartup();
 
+	// Setup suite: File
+	AlfTest testsFile[] = {
+		{ "Open", test_alfFileOpen }
+	};
+	AlfTestSuite* suiteFile = alfCreateTestSuite("File", testsFile, 1);
+
 	// Setup suite: Unicode
 	AlfTest testsUnicode[] = {
 		{ "Insert", test_alfUTF8Insert },
@@ -328,11 +345,13 @@ int main()
 
 	// Run suites
 	AlfTestSuite* suites[] = {
+		suiteFile,
 		suiteUnicode,
 		suiteThread,
 		suiteCollection
 	};
-	const int failures = (int)alfRunSuites(suites, 3);
+	const int failures = (int)alfRunSuites(suites, 4);
+	alfDestroyTestSuite(suiteFile);
 	alfDestroyTestSuite(suiteCollection);
 	alfDestroyTestSuite(suiteThread);
 	alfDestroyTestSuite(suiteUnicode);
