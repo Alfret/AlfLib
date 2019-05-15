@@ -642,7 +642,7 @@ void alfDetachThread(AlfThread* thread)
 	ALF_THREAD_ASSERT(result != FALSE, "Failed to detach thread");
 #elif defined(ALF_THREAD_PTHREAD)
 	int result = pthread_detach(thread->handle);
-	ALF_THREAD_ASSERT(result == 0, "Failed to detach thread");
+	ALF_THREAD_ASSERT(result != 0, "Failed to detach thread");
 #endif
 
 	thread->detached = ALF_TRUE;
@@ -657,7 +657,7 @@ void alfKillThread(AlfThread* thread)
 	ALF_THREAD_ASSERT(result != 0, "Failed to kill thread");
 #elif defined(ALF_THREAD_PTHREAD)
 	int result = pthread_kill(thread->handle, 0);
-	ALF_THREAD_ASSERT(result == 0, "Failed to kill thread");
+	ALF_THREAD_ASSERT(result != 0, "Failed to kill thread");
 #endif
 }
 
