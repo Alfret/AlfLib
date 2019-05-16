@@ -29,10 +29,10 @@
 
 // Alf headers
 #define ALF_TEST_CATCH2_INTEROP
-#include "alf_test.h"
-#include "alf_unicode.h"
-#include "alf_thread.h"
-#include "alf_collection.h"
+#include "../alf_test.h"
+#include "../alf_unicode.h"
+#include "../alf_thread.h"
+#include "../alf_collection.h"
 
 // ========================================================================== //
 // Local Testing Data

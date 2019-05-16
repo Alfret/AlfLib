@@ -27,6 +27,8 @@
 extern "C" {
 #endif
 
+#pragma comment(lib, "dbghelp.lib")
+
 // ========================================================================== //
 // Usage
 // ========================================================================== //
@@ -177,15 +179,16 @@ extern "C" {
 // ====================================================================== //
 // Forward Declarations
 // ====================================================================== //
-	
+
 typedef struct tag_AlfTestState AlfTestState;
-	
+
 // ========================================================================== //
 // Type definitions
 // ========================================================================== //
 
 /** Test function **/
-typedef void(*PFN_AlfTest)(AlfTestState* state);
+typedef void
+(*PFN_AlfTest)(AlfTestState* state);
 
 // ========================================================================== //
 // Macro declarations
@@ -193,7 +196,7 @@ typedef void(*PFN_AlfTest)(AlfTestState* state);
 
 // Filename macro
 #if defined(_WIN32)
-	/** Macro for name of current file **/
+/** Macro for name of current file **/
 #	define __FILENAME__ (alfLastIndexOf((const char*)__FILE__, '\\') ?	\
 		alfLastIndexOf((const char*)__FILE__, '\\') + 1 : (const char*)__FILE__)
 #else
@@ -258,10 +261,10 @@ typedef struct tag_AlfTestState AlfTestState;
  */
 typedef struct AlfTestCheckParameters
 {
-	/** Internally used variable **/
-	char _u;
-	/** Test reason **/
-	const char* reason;
+  /** Internally used variable **/
+  char _u;
+  /** Test reason **/
+  const char* reason;
 } AlfTestCheckParameters;
 
 // -------------------------------------------------------------------------- //
@@ -275,10 +278,10 @@ typedef struct AlfTestCheckParameters
  */
 typedef struct AlfTestData
 {
-	/** Name of the test **/
-	const char* testName;
-	/** Test group name **/
-	const char* groupName;
+  /** Name of the test **/
+  const char* testName;
+  /** Test group name **/
+  const char* groupName;
 } AlfTestData;
 
 // ========================================================================== //
@@ -292,19 +295,30 @@ typedef struct AlfTestData
 // -------------------------------------------------------------------------- //
 
 #if defined(_WIN32)
-/** Macro for exporting function **/
-#	define ALF_TEST_EXPORT __declspec(dllexport)
+#  if defined(__cplusplus)
+    /** Macro for exporting function **/
+#   define ALF_TEST_EXPORT extern "C" __declspec(dllexport)
+# else
+    /** Macro for exporting function **/
+#   define ALF_TEST_EXPORT __declspec(dllexport)
+# endif
 #else
-#	define ALF_TEST_EXPORT
+# if defined(__cplusplus)
+    /** Macro for exporting function **/
+#   define ALF_TEST_EXPORT extern "C"
+# else
+    /** Macro for exporting function **/
+#   define ALF_TEST_EXPORT
+# endif
 #endif
 
-/** Macro to concatenate 'a' and 'b' (Auxilliary) **/
-#define ALF_TEST_CONCAT_(a, b) a ## b
+/** Macro to concatenate 'a', 'b', 'c' and 'd' (Auxilliary) **/
+#define ALF_TEST_CONCAT_(a, b, c, d) a##b##c##d
 
 // -------------------------------------------------------------------------- //
 
-/** Macro to concatenate 'a' and 'b' **/
-#define ALF_TEST_CONCAT(a, b) ALF_TEST_CONCAT_(a, b)
+/** Macro to concatenate 'a', 'b', 'c' and 'd' **/
+#define ALF_TEST_CONCAT(a, b, c, d) ALF_TEST_CONCAT_(a, b, c, d)
 
 // -------------------------------------------------------------------------- //
 
@@ -326,13 +340,13 @@ typedef struct AlfTestData
 
 /** Macro for defining a test **/
 #define ALF_TEST(name, group)												\
-	ALF_TEST_EXPORT void ALF_TEST_CONCAT(_alf_test_get_data_, __COUNTER__)	\
+	ALF_TEST_EXPORT void ALF_TEST_CONCAT(___alf__test__gtd___, __LINE__, _, __COUNTER__)	\
 		(AlfTestData* data)													\
 	{																		\
 		data->testName = name;												\
 		data->groupName = group;											\
 	}																		\
-	ALF_TEST_EXPORT void ALF_TEST_CONCAT(_alf_test_, __COUNTER__)			\
+	ALF_TEST_EXPORT void ALF_TEST_CONCAT(___alf__test__rtd___, __LINE__, _, __COUNTER__)\
 		(AlfTestState* _state_internal_)
 
 // ========================================================================== //
@@ -522,7 +536,8 @@ typedef struct AlfTestData
 // Functions
 // ========================================================================== //
 
-AlfTestInt alfTestRun();
+AlfTestInt
+alfTestRun();
 
 // ========================================================================== //
 // Check Functions
@@ -540,14 +555,15 @@ AlfTestInt alfTestRun();
  * \param line Line in file.
  * \param parameters Extended parameters, contains a reason defaulted to NULL.
  */
-void alfCheckTrue(
-	AlfTestState* state,
-	AlfTestBool require,
-	AlfTestBool predicate,
-	const char predicateString[],
-	const char* file,
-	AlfTestInt line,
-	AlfTestCheckParameters parameters);
+void
+alfCheckTrue(
+  AlfTestState* state,
+  AlfTestBool require,
+  AlfTestBool predicate,
+  const char predicateString[],
+  const char* file,
+  AlfTestInt line,
+  AlfTestCheckParameters parameters);
 
 // -------------------------------------------------------------------------- //
 
@@ -562,14 +578,15 @@ void alfCheckTrue(
  * \param line Line in file.
  * \param parameters Extended parameters, contains a reason defaulted to NULL.
  */
-void alfCheckFalse(
-	AlfTestState* state,
-	AlfTestBool require,
-	AlfTestBool predicate,
-	const char predicateString[],
-	const char* file,
-	AlfTestInt line,
-	AlfTestCheckParameters parameters);
+void
+alfCheckFalse(
+  AlfTestState* state,
+  AlfTestBool require,
+  AlfTestBool predicate,
+  const char predicateString[],
+  const char* file,
+  AlfTestInt line,
+  AlfTestCheckParameters parameters);
 
 // -------------------------------------------------------------------------- //
 
@@ -584,14 +601,15 @@ void alfCheckFalse(
  * \param line Line in file.
  * \param parameters Extended parameters, contains a reason defaulted to NULL.
  */
-void alfCheckNotNull(
-	AlfTestState* state,
-	AlfTestBool require,
-	void* pointer,
-	const char pointerText[],
-	const char* file,
-	AlfTestInt line,
-	AlfTestCheckParameters parameters);
+void
+alfCheckNotNull(
+  AlfTestState* state,
+  AlfTestBool require,
+  void* pointer,
+  const char pointerText[],
+  const char* file,
+  AlfTestInt line,
+  AlfTestCheckParameters parameters);
 
 // -------------------------------------------------------------------------- //
 
@@ -606,14 +624,15 @@ void alfCheckNotNull(
  * \param line Line in file.
  * \param parameters Extended parameters, contains a reason defaulted to NULL.
  */
-void alfCheckNull(
-	AlfTestState* state,
-	AlfTestBool require,
-	void* pointer,
-	const char pointerText[],
-	const char* file,
-	AlfTestInt line,
-	AlfTestCheckParameters parameters);
+void
+alfCheckNull(
+  AlfTestState* state,
+  AlfTestBool require,
+  void* pointer,
+  const char pointerText[],
+  const char* file,
+  AlfTestInt line,
+  AlfTestCheckParameters parameters);
 
 // -------------------------------------------------------------------------- //
 
@@ -631,17 +650,18 @@ void alfCheckNull(
  * \param line Line in file.
  * \param parameters Extended parameters, contains a reason defaulted to NULL.
  */
-void alfCheckMemEq(
-	AlfTestState* state,
-	AlfTestBool require,
-	const void* m0,
-	const void* m1,
-	const char var0[],
-	const char var1[],
-	AlfTestSize size,
-	const char* file,
-	AlfTestInt line,
-	AlfTestCheckParameters parameters);
+void
+alfCheckMemEq(
+  AlfTestState* state,
+  AlfTestBool require,
+  const void* m0,
+  const void* m1,
+  const char var0[],
+  const char var1[],
+  AlfTestSize size,
+  const char* file,
+  AlfTestInt line,
+  AlfTestCheckParameters parameters);
 
 // -------------------------------------------------------------------------- //
 
@@ -658,16 +678,17 @@ void alfCheckMemEq(
  * \param line Line in file.
  * \param parameters Extended parameters, contains a reason defaulted to NULL.
  */
-void alfCheckStrEq(
-	AlfTestState* state,
-	AlfTestBool require,
-	const char* str0, 
-	const char* str1, 
-	const char var0[], 
-	const char var1[],
-	const char* file,
-	AlfTestInt line,
-	AlfTestCheckParameters parameters);
+void
+alfCheckStrEq(
+  AlfTestState* state,
+  AlfTestBool require,
+  const char* str0,
+  const char* str1,
+  const char var0[],
+  const char var1[],
+  const char* file,
+  AlfTestInt line,
+  AlfTestCheckParameters parameters);
 
 // -------------------------------------------------------------------------- //
 
@@ -684,16 +705,17 @@ void alfCheckStrEq(
  * \param line Line in file.
  * \param parameters Extended parameters, contains a reason defaulted to NULL.
  */
-void alfCheckFloatEq(
-	AlfTestState* state,
-	AlfTestBool require,
-	const float* float0,
-	const float* float1,
-	const char var0[],
-	const char var1[],
-	const char* file,
-	AlfTestInt line,
-	AlfTestCheckParameters parameters);
+void
+alfCheckFloatEq(
+  AlfTestState* state,
+  AlfTestBool require,
+  const float* float0,
+  const float* float1,
+  const char var0[],
+  const char var1[],
+  const char* file,
+  AlfTestInt line,
+  AlfTestCheckParameters parameters);
 
 // -------------------------------------------------------------------------- //
 
@@ -710,16 +732,17 @@ void alfCheckFloatEq(
  * \param line Line in file.
  * \param parameters Extended parameters, contains a reason defaulted to NULL.
  */
-void alfCheckDoubleEq(
-	AlfTestState* state,
-	AlfTestBool require,
-	const double* double0,
-	const double* double1,
-	const char var0[],
-	const char var1[],
-	const char* file,
-	AlfTestInt line,
-	AlfTestCheckParameters parameters);
+void
+alfCheckDoubleEq(
+  AlfTestState* state,
+  AlfTestBool require,
+  const double* double0,
+  const double* double1,
+  const char var0[],
+  const char var1[],
+  const char* file,
+  AlfTestInt line,
+  AlfTestCheckParameters parameters);
 
 // ========================================================================== //
 // Utility Functions
@@ -731,7 +754,8 @@ void alfCheckDoubleEq(
  * \param character Character to look for.
  * \return Last index of.
  */
-const char* alfLastIndexOf(const char* string, char character);
+const char*
+alfLastIndexOf(const char* string, char character);
 
 // ========================================================================== //
 // End of header
