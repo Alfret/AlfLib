@@ -656,6 +656,9 @@ alfTestRun()
   assert(success && "Failed to enumerate symbols");
 #else
 
+
+
+
 #endif
 
   // Sort list

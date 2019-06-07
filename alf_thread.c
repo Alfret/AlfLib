@@ -30,7 +30,7 @@
 #include <memory.h>
 
 // Platform detection
-#if defined(_WIN32) || defined(_WIN64) || defined(__MINGW64__)
+#if defined(_WIN32) || defined(__MINGW64__)
 #	define ALF_THREAD_TARGET_WINDOWS
 #	define NOMINMAX
 #	define WIN32_LEAN_AND_MEAN
@@ -41,7 +41,7 @@
 #	define ALF_THREAD_PTHREAD
 #	define _GNU_SOURCE
 #	include <semaphore.h>
-#	include <zconf.h>
+#	include <limits.h>
 #	include <errno.h>
 #	include <unistd.h>
 #elif defined (__APPLE__)
