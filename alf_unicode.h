@@ -89,6 +89,32 @@ typedef AlfBool(*PFN_AlfUnicodeIterateCodepoint)(
 typedef AlfBool(*PFN_AlfUnicodeCodepointPredicate)(uint32_t codepoint);
 
 // ========================================================================== //
+// Structures
+// ========================================================================== //
+
+/** \struct AlfUnicodeRange
+ * \author Filip Björklund
+ * \date 10 juni 2019 - 16:32
+ * \brief Range.
+ * \details
+ * Represents a range inside a string. The range has an offset and size that 
+ * tells the location of the range in the string. This is returned from 
+ * functions where the user want to perform the actual manipulation of the 
+ * string by just knowing the range.
+ * 
+ * One example are substrings where the user can retrieve the range of the 
+ * substring instead of letting the library allocate and return the actual 
+ * substring.
+ */
+typedef struct AlfUnicodeRange
+{
+  /** Offset in bytes to start of range **/
+  uint64_t offset;
+  /** Size of range in bytes **/
+  uint64_t size;
+} AlfUnicodeRange;
+
+// ========================================================================== //
 // UTF-8 Functions
 // ========================================================================== //
 
@@ -275,6 +301,26 @@ AlfChar8* alfUTF8Substring(
 
 // -------------------------------------------------------------------------- //
 
+/** Returns a substring range of a UTF-8 encoded string from the specified 
+ * 'from' index and 'count' number of indices forward.
+ * \note Specifying a 'from' and 'count' where the sum is greater than the 
+ * length of the string gives the same behaviour as alfUTF8SubstringFromRange.
+ * \note If the string is NULL, 'from' is outside the string or 'count' is zero 
+ * then false is returned.
+ * \brief Returns UTF-8 substring range.
+ * \param[in] string String to get substring of.
+ * \param[in] from Index to get substring from.
+ * \param[in] count Number of codepoints in substring.
+ * \param[out] range The substring range
+ * \param True if the range was successfully set otherwise false.
+ */
+AlfBool alfUTF8SubstringRange(const AlfChar8* string,
+                           uint64_t from,
+                           uint64_t count,
+                           AlfUnicodeRange* range);
+
+// -------------------------------------------------------------------------- //
+
 /** Returns substring of a UTF-8 encoded string from the specified 'from' index
  * to the end of the string.
  * \note Returns NULL if string is NULL.
@@ -312,6 +358,37 @@ AlfChar8* alfUTF8Insert(
 	uint64_t from, 
 	uint64_t count, 
 	const AlfChar8* insertion);
+
+// -------------------------------------------------------------------------- //
+
+/** Replace all occurances of the specified codepoint 'from' with the codepoint
+ * 'to'.
+ * \note This function is slower than alfUTF8ReplaceCodepointEqualWidth, however
+ * it correctly deals with codepoints that are not of equal width.
+ * \brief Replace codepoints.
+ * \param string String to replace codepoints in.
+ * \param from Codepoint to replace.
+ * \param to Codepoint to replace with.
+ * \return True if the operation succeeded otherwise false.
+ */
+AlfChar8* alfUTF8ReplaceCodepoint(const AlfChar8* string,
+                                  uint32_t from,
+                                  uint32_t to);
+
+// -------------------------------------------------------------------------- //
+
+/** Replace all occurances of the specified codepoint 'from' with the codepoint
+ * 'to'.
+ * \note This function requires the codepoints to be of equal width.
+ * \brief Replace codepoints.
+ * \param string String to replace codepoints in.
+ * \param from Codepoint to replace.
+ * \param to Codepoint to replace with.
+ * \return True if the operation succeeded otherwise false.
+ */
+AlfBool alfUTF8ReplaceCodepointEqualWidth(AlfChar8* string,
+                                          uint32_t from,
+                                          uint32_t to);
 
 // -------------------------------------------------------------------------- //
 
