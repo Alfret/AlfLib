@@ -1,5 +1,7 @@
 ## Project files ##
+CMakeSettings.json
 local/
+out/
 .vs/
 
 # Object files
