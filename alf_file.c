@@ -41,6 +41,7 @@
 #include <windows.h>
 #elif defined(__linux__)
 #define ALF_FILE_TARGET_LINUX
+#include <dirent.h>
 #include <limits.h>
 #include <unistd.h>
 #elif defined(__APPLE__)
@@ -502,6 +503,78 @@ alfFilesystemIsDirectoryPath(const char* path)
 #elif defined(ALF_FILE_TARGET_MACOS)
   assert(0 && "Not implemented");
 #endif
+}
+
+// -------------------------------------------------------------------------- //
+
+AlfFileResult
+alfFilesystemEnumerateDirectory(const char*** filesOut,
+                                uint32_t* fileCountOut,
+                                const char* directoryPath)
+{
+  *filesOut = NULL;
+  *fileCountOut = 0;
+
+#if defined(ALF_FILE_TARGET_WIN32)
+  // Find first file
+  wchar_t* path = alfFileUTF8ToUTF16(directoryPath);
+  WIN32_FIND_DATAW findData;
+  HANDLE file = FindFirstFileW(path, &findData);
+  free(path);
+  if (file == INVALID_HANDLE_VALUE) {
+    AlfFileResult result = alfFileWin32ResultFromError(GetLastError());
+    return kAlfFileNotFound;
+  }
+
+  // Setup list
+  uint32_t fileListCapacity = 2, fileListSize = 0;
+  char** files = malloc(sizeof(char*) * fileListCapacity);
+  if (!files) {
+    return kAlfFileOutOfMemory;
+  }
+  files[fileListSize++] = alfFileUTF16ToUTF8(findData.cFileName);
+
+  // Find rest of files
+  while (FindNextFileW(file, &findData) != 0) {
+    // Enlarge list
+    if (fileListSize + 1 >= fileListCapacity) {
+      fileListCapacity *= 2;
+      char** newFiles = malloc(sizeof(char*) * fileListCapacity);
+      if (!newFiles) {
+        free(files);
+        return kAlfFileOutOfMemory;
+      }
+      memcpy(newFiles, files, sizeof(char*) * fileListSize);
+      free(files);
+      files = newFiles;
+    }
+
+    // Add path
+    files[fileListSize++] = alfFileUTF16ToUTF8(findData.cFileName);
+  }
+#elif defined(ALF_FILE_TARGET_LINUX)
+  // Open directory
+  DIR* directory = opendir(directoryPath);
+  if (!directory) {
+    return alfFileErrorFromErrno(errno);
+  }
+
+  //
+
+#endif
+
+  // Finalize
+  *filesOut = files;
+  *fileCountOut = fileListSize;
+  return kAlfFileSuccess;
+}
+
+// -------------------------------------------------------------------------- //
+
+void
+alfFilesystemFreeFileList(const char** files)
+{
+  free(files);
 }
 
 // ========================================================================== //

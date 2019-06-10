@@ -341,6 +341,29 @@ test_alfHashTableRemove(AlfTestState* state)
 int
 main()
 {
+
+
+  char** files;
+  uint32_t count;
+  AlfFileResult r = alfFilesystemEnumerateDirectory(
+    &files,
+    &count,
+    "C:/Filip/Programmering/Projects/Diabas/thirdparty/glfw/src/*");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   // Startup
   alfThreadStartup();
 

@@ -257,6 +257,28 @@ AlfBool alfFilesystemIsFilePath(const char* path);
  */
 AlfBool alfFilesystemIsDirectoryPath(const char* path);
 
+// -------------------------------------------------------------------------- //
+
+/** Enumerate all objects in a directory.
+ * \brief Enumerate directory.
+ * \param[out] filesOut Created list of files.
+ * \param[out] fileCountOut Number of files.
+ * \param directoryPath Path to the directory to enumerate.
+ * \return Result.
+ * - kAlfFileSuccess: Successfully enumerated files.
+ */
+AlfFileResult alfFilesystemEnumerateDirectory(const char*** filesOut,
+                                              uint32_t* fileCountOut,
+                                              const char* directoryPath);
+
+// -------------------------------------------------------------------------- //
+
+/** Free a list of file paths.
+ * \brief Free path list.
+ * \param[in] files List to free.
+ */
+void alfFilesystemFreeFileList(const char** files);
+
 // ========================================================================== //
 // File Functions
 // ========================================================================== //
