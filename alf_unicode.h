@@ -377,6 +377,15 @@ AlfChar8* alfUTF8ReplaceCodepoint(const AlfChar8* string,
 
 // -------------------------------------------------------------------------- //
 
+/** Replace all occurances of the specified codepoint 'from' with the codepoint
+ * 'to'.
+ * \note This function requires the codepoints to be of equal width.
+ * \brief Replace codepoints.
+ * \param string String to replace codepoints in.
+ * \param from Codepoint to replace.
+ * \param to Codepoint to replace with.
+ * \return True if the operation succeeded otherwise false.
+ */
 AlfBool alfUTF8ReplaceCodepointEqualWidth(AlfChar8* string,
                                           uint32_t from,
                                           uint32_t to);
