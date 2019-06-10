@@ -82,10 +82,32 @@ uint32_t numbers0through79[] = { 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11,
                                  72, 73, 74, 75, 76, 77, 78, 79 };
 
 // ========================================================================== //
+// Utility Functions
+// ========================================================================== //
+
+char*
+CopyString(const char* string)
+{
+  const size_t size = strlen(string);
+  char* output = (char*)malloc(size + 1);
+  if (!output) {
+    return NULL;
+  }
+  memcpy(output, string, size);
+  output[size] = 0;
+  return output;
+}
+
+// ========================================================================== //
 // Main Function
 // ========================================================================== //
 
-ALF_TEST_MAIN()
+int
+main()
+{
+  const AlfTestInt r = alfTestRun();
+  return r;
+}
 
 // ========================================================================== //
 // Unicode Tests
@@ -192,11 +214,74 @@ ALF_TEST("Substring", "[UTF-8]")
 
   // Invalid index
   char* output9 = alfUTF8Substring(input0, 100, 1);
-  ALF_CHECK_NULL(output9, "From index 100, count of 1");
+  ALF_CHECK_STR_EQ(output9, "", "100, count 1");
+  char* output10 = alfUTF8Substring(input0, 100, 0);
+  ALF_CHECK_STR_EQ(output10, "", "100, count 0");
+
+  char* output11 = alfUTF8Substring(input0, 6, 0);
+  ALF_CHECK_STR_EQ(output11, "", "6, count 0");
+  char* output12 = alfUTF8Substring(input0, 6, 2);
+  ALF_CHECK_STR_EQ(output12, "", "6, count 2");
+
+  // Borderline
+  char* output13 = alfUTF8Substring(input0, 5, 1);
+  ALF_CHECK_STR_EQ(output13, "g", "5, count 1");
+  char* output14 = alfUTF8Substring(input0, 5, 2);
+  ALF_CHECK_STR_EQ(output14, "g", "5, count 2");
 
   // Invalid count
-  char* output10 = alfUTF8Substring(input0, 0, 100);
-  ALF_CHECK_NULL(output10, "From beginning, count of 100");
+  char* output15 = alfUTF8Substring(input0, 0, 100);
+  ALF_CHECK_STR_EQ(output15, input0, "From beginning, count of 100");
+}
+
+// -------------------------------------------------------------------------- //
+
+ALF_TEST("SubstringRange", "[UTF-8]")
+{
+  // Setup input strings
+  const char* input0 = "måndag";
+
+  // Borderline
+  AlfUnicodeRange range;
+  AlfBool success = alfUTF8SubstringRange(input0, 5, 1, &range);
+  ALF_CHECK_TRUE(success && range.offset == 6 && range.size == 1, "5, count 1");
+
+  success = alfUTF8SubstringRange(input0, 5, 2, &range);
+  ALF_CHECK_TRUE(!success, "5, count 1");
+}
+
+// -------------------------------------------------------------------------- //
+
+ALF_TEST("Replace codepoints", "[UTF-8]")
+{
+  // Normal equal width
+  AlfChar8* input = CopyString("This better be some banana bowls");
+  AlfBool success = alfUTF8ReplaceCodepointEqualWidth(input, 'b', 'q');
+  ALF_CHECK_STR_EQ(input, "This qetter qe some qanana qowls");
+  free(input);
+
+  input = CopyString("弈etter 弈e some 弈anana 弈o弈");
+  success = alfUTF8ReplaceCodepointEqualWidth(input, 24328, 24329);
+  ALF_CHECK_STR_EQ(input, "弉etter 弉e some 弉anana 弉o弉");
+  free(input);
+
+  // Borderline equal width
+  input = CopyString("better be some banana bob");
+  success = alfUTF8ReplaceCodepointEqualWidth(input, 'b', 'q');
+  ALF_CHECK_STR_EQ(input, "qetter qe some qanana qoq");
+  free(input);
+
+  // Normal different width
+  const char* input1 = "This better be some banana bowls";
+  char* output = alfUTF8ReplaceCodepoint(input1, 'b', 24328);
+  //ALF_CHECK_STR_EQ(output, "This 弈etter 弈e some 弈anana 弈owls");
+  AlfBool equal = strcmp(output, "This 弈etter 弈e some 弈anana 弈owls");
+  ALF_CHECK_TRUE(equal);
+
+  // Borderline different width
+  const char* input2 = "better be some banana bob";
+  output = alfUTF8ReplaceCodepoint(input1, 'b', 24328);
+  ALF_CHECK_STR_EQ(output, "弈etter 弈e some 弈anana 弈o弈");
 }
 
 // -------------------------------------------------------------------------- //
