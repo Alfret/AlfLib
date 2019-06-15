@@ -284,27 +284,31 @@ AlfBool alfUTF8EndsWith(const AlfChar8* string, uint32_t codepoint);
 // -------------------------------------------------------------------------- //s
 
 /** Returns substring of a UTF-8 encoded string from the specified 'from' index
- * and 'count' number of indices forward.
+ * and 'count' number of indices forward. If 'count' is -1 then the rest of the
+ * string beginning at 'from' is returned.
  * \note Returns NULL if string is NULL.
- * \note A sum of 'from' and 'count' greater than the lenght of the string will
- * result in undefined behaviour.
+ * \note A sum of 'from' and 'count' greater than the length of the string will
+ * result the same behaviour as passing a count of -1.
  * \brief Returns UTF-8 substring.
  * \param string String to get substring of.
  * \param from Index to get substring from.
- * \param count Number of codepoints in substring.
+ * \param count Number of codepoints in substring. -1 means taking entire 
+ * substring afte the 'from' index.
  * \return Substring or NULL on failure.
  */
 AlfChar8* alfUTF8Substring(
 	const AlfChar8* string, 
 	uint64_t from, 
-	uint64_t count);
+	int64_t count);
 
 // -------------------------------------------------------------------------- //
 
 /** Returns a substring range of a UTF-8 encoded string from the specified 
- * 'from' index and 'count' number of indices forward.
+ * 'from' index and 'count' number of indices forward. If 'count' is -1 then the
+ * rest of the string beginning at 'from' is returned.
  * \note Specifying a 'from' and 'count' where the sum is greater than the 
- * length of the string gives the same behaviour as alfUTF8SubstringFromRange.
+ * length of the string results in the same behaviour as passing a 'count' 
+ * of -1.
  * \note If the string is NULL, 'from' is outside the string or 'count' is zero 
  * then false is returned.
  * \brief Returns UTF-8 substring range.
@@ -316,20 +320,8 @@ AlfChar8* alfUTF8Substring(
  */
 AlfBool alfUTF8SubstringRange(const AlfChar8* string,
                            uint64_t from,
-                           uint64_t count,
+                           int64_t count,
                            AlfUnicodeRange* range);
-
-// -------------------------------------------------------------------------- //
-
-/** Returns substring of a UTF-8 encoded string from the specified 'from' index
- * to the end of the string.
- * \note Returns NULL if string is NULL.
- * \brief Returns UTF-8 substring.
- * \param string String to get substring of.
- * \param from Index to get substring from.
- * \return Substring or NULL on failure.
- */
-AlfChar8* alfUTF8SubstringFrom(const AlfChar8* string, uint64_t from);
 
 // -------------------------------------------------------------------------- //
 
