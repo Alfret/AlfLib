@@ -28,10 +28,13 @@ set(COMMON_SOURCE
 
 # Executable
 add_executable(${PROJECT_NAME} ${COMMON_SOURCE})
+if (UNIX AND NOT APPLE)
+  target_link_libraries(${PROJECT_NAME} pthread dl)
+endif ()
 
 # Set the working directory for the Visual Studio debugger
 if (WIN32)
-set_target_properties(
+  set_target_properties(
     ${PROJECT_NAME} PROPERTIES
     VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
-endif()
+endif ()

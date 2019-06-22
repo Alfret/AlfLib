@@ -418,7 +418,7 @@ alfUTF8EndsWith(const AlfChar8* string, uint32_t codepoint)
 AlfChar8*
 alfUTF8Substring(const AlfChar8* string, uint64_t from, int64_t count)
 {
-    // Retrieve range
+  // Retrieve range
   AlfUnicodeRange range;
   const AlfBool success = alfUTF8SubstringRange(string, from, count, &range);
   if (!success) {
@@ -746,18 +746,12 @@ alfUTF8Iterate(const AlfChar8* string,
 // UTF-16 Private Functions
 // ========================================================================== //
 
-/** Returns number of codeunits that a codepoint is encoded in for the UTF-16
+/** Returns number of code-units that a codepoint is encoded in for the UTF-16
  * encoding **/
 int32_t
 alfUTF16CodepointWidthFromFirstByte(AlfChar16 c)
 {
-  if (c <= 0xFFFF && (c < 0xD800 || c > 0xDFFF)) {
-    return 1;
-  }
-  if (c <= 0x10FFFF) {
-    return 2;
-  }
-  return -1;
+  return (c >> 10u & 0x3F) == 0x36 ? 2 : 1;
 }
 
 // ========================================================================== //
