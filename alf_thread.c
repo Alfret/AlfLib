@@ -853,10 +853,10 @@ alfSetThreadName(const char* name)
     // TODO(Filip Bj�rklund): Don't cut UTF-8 codepoints in half!
 
     // Set the thread name
-    pthread_setname_np(temp_name);
+    pthread_setname_np(thread, name, strlen(name));
   } else {
     // Set the thread name
-    pthread_setname_np(name);
+    pthread_setname_np(thread, name, strlen(name));
   }
 #endif
 
